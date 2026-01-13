@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexGen | Workspace Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="scripts/supabase.js"></script>
+</head>
+
+<body style="background: #0f172a;">
+    <div style="display: flex; min-height: 100vh;">
+        <!-- Sidebar -->
+        <aside class="glass" style="width: 280px; margin: 1rem; padding: 2rem; display: flex; flex-direction: column;">
+            <a href="index.html"
+                style="font-size: 1.5rem; font-weight: 700; font-family: 'Outfit'; margin-bottom: 3rem;">
+                Nex<span style="color: var(--primary);">Gen</span>
+            </a>
+
+            <nav id="sidebar-nav" style="display: grid; gap: 0.5rem; flex-grow: 1;">
+                <button class="btn btn-outline nav-item active" data-view="dashboard-view">
+                    <i class="fa-solid fa-gauge"></i> Dashboard
+                </button>
+                <button class="btn btn-outline nav-item" data-view="blogs-view">
+                    <i class="fa-solid fa-pen-to-square"></i> Manage Blogs
+                </button>
+                <button class="btn btn-outline nav-item" data-view="files-view">
+                    <i class="fa-solid fa-folder-open"></i> File Manager
+                </button>
+                <button class="btn btn-outline nav-item" data-view="wallet-view">
+                    <i class="fa-solid fa-wallet"></i> My Wallet
+                </button>
+                <button class="btn btn-outline nav-item" data-view="users-view" id="nav-users" style="display: none;">
+                    <i class="fa-solid fa-users"></i> Platform Users
+                </button>
+                <button class="btn btn-outline nav-item" data-view="analytics-view" id="nav-analytics"
+                    style="display: none;">
+                    <i class="fa-solid fa-chart-simple"></i> Analytics
+                </button>
+                <button class="btn btn-outline nav-item" data-view="settings-view">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
+            </nav>
+
+            <button id="logout-btn" class="btn btn-outline"
+                style="margin-top: 3rem; color: #f87171; border-color: rgba(248, 113, 113, 0.2);">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+        </aside>
+
+        <!-- Main Content -->
+        <main style="flex-grow: 1; padding: 2rem 3rem 2rem 1rem;">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
+                <div>
+                    <h1 id="view-title" style="font-size: 2rem;">My <span
+                            style="color: var(--primary);">Workspace</span></h1>
+                    <p id="view-subtitle" style="color: var(--text-muted);">Welcome back to your creator hub.</p>
+                </div>
+                <div id="header-actions" style="display: flex; gap: 1rem;">
+                    <button id="open-file-modal" class="btn btn-outline"><i class="fa-solid fa-plus"></i> Upload
+                        File</button>
+                    <button id="open-blog-modal" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Blog
+                        Post</button>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="admin-view">
+                <div class="glass-card">
+                    <h3 style="margin-bottom: 1.5rem;">Quick Stats</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div
+                            style="background: rgba(37, 99, 235, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
+                            <p style="font-size: 0.9rem; color: var(--text-muted);">Total Blogs</p>
+                            <p id="stat-blogs" style="font-size: 2rem; font-weight: 600;">0</p>
+                        </div>
+                        <div id="container-stat-users"
+                            style="background: rgba(37, 99, 235, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
+                            <p style="font-size: 0.9rem; color: var(--text-muted);">Total Users</p>
+                            <p id="stat-users" style="font-size: 2rem; font-weight: 600;">0</p>
+                        </div>
+                        <div
+                            style="background: rgba(16, 185, 129, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #10b981;">
+                            <p style="font-size: 0.9rem; color: var(--text-muted);">Files Uploaded</p>
+                            <p id="stat-files" style="font-size: 2rem; font-weight: 600;">0</p>
+                        </div>
+                        <div
+                            style="background: rgba(245, 158, 11, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #f59e0b;">
+                            <p style="font-size: 0.9rem; color: var(--text-muted);">Total Blog Views</p>
+                            <p id="stat-views" style="font-size: 2rem; font-weight: 600;">0</p>
+                        </div>
+                        <div
+                            style="background: rgba(16, 185, 129, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #10b981;">
+                            <p style="font-size: 0.9rem; color: var(--text-muted);">Est. Earnings</p>
+                            <p id="stat-earnings" style="font-size: 2rem; font-weight: 600;">Rs. 0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="margin-top: 3rem;">
+                    <h3 style="margin-bottom: 1.5rem;">Recent Activity</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">New blog post
+                            "The Future of AI" published.</li>
+                        <li style="padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">User 'john.doe'
+                            registered.</li>
+                        <li style="padding: 0.75rem 0;">File 'report_q3.pdf' uploaded.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Analytics View -->
+            <div id="analytics-view" class="admin-view" style="display: none;">
+                <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
+                    <button id="simulate-data-btn" class="btn btn-outline"
+                        style="font-size: 0.8rem; border-color: var(--primary);">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Simulate Visitor Data
+                    </button>
+                </div>
+                <div id="no-analytics-data" class="glass-card"
+                    style="display: none; text-align: center; padding: 4rem; margin-bottom: 1.5rem;">
+                    <i class="fa-solid fa-chart-area"
+                        style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                    <h3>No Visitor Data Yet</h3>
+                    <p style="color: var(--text-muted);">Visitor data will appear here once someone visits your
+                        homepage.</p>
+                </div>
+                <div id="analytics-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                    <!-- Source Distribution -->
+                    <div class="glass-card">
+                        <h4 style="margin-bottom: 1rem;">Traffic Source (Mail vs Random)</h4>
+                        <canvas id="sourceChart"></canvas>
+                    </div>
+                    <!-- Traffic Type -->
+                    <div class="glass-card">
+                        <h4 style="margin-bottom: 1rem;">Visit Method (Link vs Direct)</h4>
+                        <canvas id="typeChart"></canvas>
+                    </div>
+                    <!-- Age Distribution -->
+                    <div class="glass-card">
+                        <h4 style="margin-bottom: 1rem;">Age Groups</h4>
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                    <!-- Gender Distribution -->
+                    <div class="glass-card">
+                        <h4 style="margin-bottom: 1rem;">Gender Distribution</h4>
+                        <canvas id="genderChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Advanced Stats Table -->
+                <div class="glass-card" style="margin-top: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem;">Technical Visitor Insight</h4>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; text-align: center;">
+                        <div style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">Top Browser</p>
+                            <p id="top-browser" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">
+                                Loading...</p>
+                        </div>
+                        <div style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">Main Device</p>
+                            <p id="top-device" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">
+                                Loading...</p>
+                        </div>
+                        <div style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">Primary Location</p>
+                            <p id="top-location" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">
+                                Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wallet View -->
+            <div id="wallet-view" class="admin-view" style="display: none;">
+                <div class="glass-card" style="max-width: 500px; margin: 0 auto; text-align: center; padding: 3rem;">
+                    <i class="fa-solid fa-wallet"
+                        style="font-size: 4rem; color: var(--primary); margin-bottom: 2rem;"></i>
+                    <h2 style="margin-bottom: 1rem;">My Wallet</h2>
+                    <div
+                        style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 1rem; margin-bottom: 2rem;">
+                        <p style="color: var(--text-muted); margin-bottom: 0.5rem;">Available Balance</p>
+                        <h1 id="wallet-balance" style="font-size: 3rem;">Rs. 0.00</h1>
+                    </div>
+                    <button id="withdraw-btn" class="btn btn-primary" style="width: 100%; padding: 1rem;">Withdraw
+                        Funds</button>
+                    <p style="margin-top: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">Minimum withdrawal:
+                        Rs. 10.00</p>
+                </div>
+            </div>
+
+
+            <!-- Blogs View -->
+            <div id="blogs-view" class="admin-view" style="display: none;">
+                <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.9rem;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                            <th style="padding: 1rem;">Title</th>
+                            <th style="padding: 1rem;">Category</th>
+                            <th style="padding: 1rem;">Date</th>
+                            <th style="padding: 1rem;">Status</th>
+                            <th style="padding: 1rem;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-blog-table"></tbody>
+                </table>
+            </div>
+
+            <!-- Files View -->
+            <div id="files-view" class="admin-view" style="display: none;">
+                <div class="glass-card">
+                    <h3 style="margin-bottom: 1.5rem;">File Explorer</h3>
+                    <div id="file-list"
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users View -->
+            <div id="users-view" class="admin-view" style="display: none;">
+                <div class="glass-card">
+                    <h3 style="margin-bottom: 1.5rem;">Platform Users</h3>
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.9rem;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                                <th style="padding: 1rem;">Name</th>
+                                <th style="padding: 1rem;">Email</th>
+                                <th style="padding: 1rem;">Role</th>
+                                <th style="padding: 1rem;">Earnings</th>
+                                <th style="padding: 1rem;">Withdrawn</th>
+                                <th style="padding: 1rem;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-user-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="admin-view" style="display: none;">
+                <div class="glass-card" style="max-width: 500px;">
+                    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-shield-halved"></i> Security Settings</h3>
+                    <form id="change-password-form" style="display: grid; gap: 1rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">New
+                                Password</label>
+                            <input type="password" id="new-password" required placeholder="Min 6 characters"
+                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Confirm
+                                Password</label>
+                            <input type="password" id="confirm-password" required placeholder="••••••••"
+                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Update Password</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Blog Modal -->
+    <div id="blog-modal" class="glass"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div class="glass-card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <h2 style="margin-bottom: 1.5rem;">Create New Blog Post</h2>
+            <form id="new-blog-form" style="display: grid; gap: 1rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem;">Title</label>
+                    <input type="text" id="blog-title" required
+                        style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem;">Cover Image</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="url" id="blog-image" placeholder="https://example.com/image.jpg"
+                            style="flex: 1; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                        <button type="button" id="upload-blog-image-btn" class="btn btn-outline"
+                            style="padding: 0 1rem;"><i class="fa-solid fa-upload"></i></button>
+                    </div>
+                    <input type="file" id="blog-image-file" accept="image/*" style="display: none;">
+                    <small style="color: var(--text-muted); margin-top: 0.25rem; display: block;">Paste a URL or upload
+                        a file.</small>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem;">Category</label>
+                    <select id="blog-category"
+                        style="width: 100%; padding: 0.75rem; background: #1e293b; border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                        <option value="TECHNOLOGY">Technology</option>
+                        <option value="BUSINESS">Business</option>
+                        <option value="DESIGN">Design</option>
+                        <option value="LIFESTYLE">Lifestyle</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem;">Excerpt</label>
+                    <textarea id="blog-excerpt" required
+                        style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white; height: 80px;"></textarea>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem;">Attach File (Optional)</label>
+                    <select id="blog-file-attach"
+                        style="width: 100%; padding: 0.75rem; background: #1e293b; border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                        <option value="">No File Attached</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem;">Full Content</label>
+                    <textarea id="blog-content" required
+                        style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white; height: 150px;"></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">Publish
+                        Post</button>
+                    <button type="button" id="close-blog-modal" class="btn btn-outline"
+                        style="flex: 1; justify-content: center;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- File Upload simulation (hidden) -->
+    <input type="file" id="file-input" style="display: none;">
+
+    <script src="scripts/dashboard.js"></script>
+</body>
+
+</html>

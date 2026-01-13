@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexGen | Read Article</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="scripts/supabase.js"></script>
+</head>
+
+<body>
+    <nav class="glass" style="position: sticky; top: 1rem; z-index: 1000; margin: 1rem; padding: 1rem;">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="index.html" style="font-size: 1.5rem; font-weight: 700; font-family: 'Outfit';">
+                Nex<span style="color: var(--primary);">Gen</span>
+            </a>
+            <div style="display: flex; gap: 2rem; align-items: center;">
+                <a href="index.html#blogs">All Blogs</a>
+                <a href="auth.html" class="btn btn-outline" id="nav-btn">Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="section">
+        <div class="container" style="max-width: 800px;">
+            <div id="blog-content-area">
+                <!-- Blog content will be injected here -->
+                <div style="text-align: center; padding: 5rem;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary);"></i>
+                    <p style="margin-top: 1rem; color: var(--text-muted);">Loading article...</p>
+                </div>
+            </div>
+
+            <!-- AdSense Placeholder inside blog -->
+            <div class="glass-card"
+                style="margin: 4rem 0; text-align: center; padding: 2rem; border-style: dashed; border-color: var(--secondary);">
+                <p style="color: var(--text-muted);">IN-ARTICLE ADVERTISEMENT</p>
+                <small>Placeholder for Google AdSense</small>
+            </div>
+        </div>
+    </main>
+
+    <footer class="section" style="border-top: 1px solid var(--border);">
+        <div class="container" style="text-align: center; color: var(--text-muted);">
+            &copy; 2026 NexGen. All rights reserved.
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const blogId = urlParams.get('id');
+            const container = document.getElementById('blog-content-area');
+
+            if (!blogId) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const { data: blog, error } = await supabase.from('blogs').select('*').eq('id', blogId).single();
+
+            if (error || !blog) {
+                container.innerHTML = '<h1>Article not found.</h1><a href="index.html" class="btn btn-primary" style="margin-top: 2rem;">Back to Home</a>';
+                return;
+            }
+
+            document.title = `${blog.title} | NexGen`;
+
+            container.innerHTML = `
+                <small style="color: var(--primary); text-transform: uppercase; font-weight: 600;">${blog.category}</small>
+                <h1 style="font-size: 3.5rem; margin: 1rem 0 2rem;">${blog.title}</h1>
+                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 3rem; color: var(--text-muted);">
+                    <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div>
+                        <p style="color: var(--text); font-weight: 500;">Admin User</p>
+                        <p style="font-size: 0.8rem;">${blog.date} • 5 min read</p>
+                    </div>
+                </div>
+                ${blog.image_url ? `
+                    <div style="width: 100%; border-radius: 1rem; margin-bottom: 3rem; overflow: hidden; max-height: 500px;">
+                        <img src="${blog.image_url}" style="width: 100%; height: auto; object-fit: cover; display: block;">
+                    </div>
+                ` : `
+                    <div style="height: 400px; background: #334155; border-radius: 1rem; margin-bottom: 3rem; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-image" style="font-size: 5rem; color: var(--secondary);"></i>
+                    </div>
+                `}
+                <div style="font-size: 1.1rem; line-height: 1.8; color: var(--text-muted);">
+                    ${blog.content.split('\n').map(p => `<p style="margin-bottom: 1.5rem;">${p}</p>`).join('')}
+                </div>
+
+                ${blog.file_id ? `
+                    <div id="file-attachment-area" style="margin-top: 4rem; padding: 2rem; background: rgba(37, 99, 235, 0.05); border: 1px solid var(--primary); border-radius: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <h4 style="margin-bottom: 0.5rem; color: white;">Attached Resource</h4>
+                            <p id="attached-file-name" style="font-size: 0.9rem; color: var(--text-muted);">Loading file info...</p>
+                        </div>
+                        <a id="download-link" href="#" target="_blank" class="btn btn-primary"><i class="fa-solid fa-download"></i> Download</a>
+                    </div>
+                ` : ''}
+            `;
+
+            if (blog.file_id) {
+                const { data: file } = await supabase.from('files').select('*').eq('id', blog.file_id).single();
+                if (file) {
+                    document.getElementById('attached-file-name').innerText = `${file.name} (${file.size})`;
+                    document.getElementById('download-link').href = file.url;
+                }
+            }
+
+            // Increment view count
+            await supabase.rpc('increment_view_count', { blog_id: blogId });
+            // Fallback if RPC not defined: await supabase.from('blogs').update({ views: (blog.views || 0) + 1 }).eq('id', blogId);
+
+            // Adjust nav button if logged in
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                const navBtn = document.getElementById('nav-btn');
+                if (navBtn) {
+                    navBtn.innerText = 'Dashboard';
+                    navBtn.href = 'dashboard.html';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
