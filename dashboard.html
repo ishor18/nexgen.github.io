@@ -41,6 +41,14 @@
                     style="display: none;">
                     <i class="fa-solid fa-chart-simple"></i> Analytics
                 </button>
+                <button class="btn btn-outline nav-item" data-view="subscribers-view" id="nav-subscribers"
+                    style="display: none;">
+                    <i class="fa-solid fa-envelope"></i> Subscribers
+                </button>
+                <button class="btn btn-outline nav-item" data-view="comments-view" id="nav-comments"
+                    style="display: none;">
+                    <i class="fa-solid fa-comments"></i> Comments
+                </button>
                 <button class="btn btn-outline nav-item" data-view="settings-view">
                     <i class="fa-solid fa-gear"></i> Settings
                 </button>
@@ -238,6 +246,56 @@
                             </tr>
                         </thead>
                         <tbody id="admin-user-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Subscribers View -->
+            <div id="subscribers-view" class="admin-view" style="display: none;">
+                <div class="glass-card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3><i class="fa-solid fa-envelope"></i> Newsletter Subscribers</h3>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">
+                            Total: <span id="subscriber-count" style="color: var(--primary); font-weight: 600;">0</span>
+                        </div>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.9rem;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                                <th style="padding: 1rem;">Email</th>
+                                <th style="padding: 1rem;">Subscribed On</th>
+                                <th style="padding: 1rem;">Status</th>
+                                <th style="padding: 1rem;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subscribers-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Comments View -->
+            <div id="comments-view" class="admin-view" style="display: none;">
+                <div class="glass-card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3><i class="fa-solid fa-comments"></i> Blog Comments</h3>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">
+                            Pending: <span id="pending-count" style="color: #f59e0b; font-weight: 600;">0</span>
+                        </div>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.9rem;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                                <th style="padding: 1rem;">Author</th>
+                                <th style="padding: 1rem;">Comment</th>
+                                <th style="padding: 1rem;">Blog</th>
+                                <th style="padding: 1rem;">Date</th>
+                                <th style="padding: 1rem;">Status</th>
+                                <th style="padding: 1rem;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comments-table"></tbody>
                     </table>
                 </div>
             </div>

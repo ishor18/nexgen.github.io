@@ -31,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (navUsers) navUsers.style.display = 'flex';
             const navAnalytics = document.getElementById('nav-analytics');
             if (navAnalytics) navAnalytics.style.display = 'flex';
+            const navSubscribers = document.getElementById('nav-subscribers');
+            if (navSubscribers) navSubscribers.style.display = 'flex';
+            const navComments = document.getElementById('nav-comments');
+            if (navComments) navComments.style.display = 'flex';
             const userStat = document.getElementById('container-stat-users');
             if (userStat) userStat.style.display = 'block';
             document.getElementById('view-title').innerHTML = `Admin <span style="color: var(--primary);">Dashboard</span>`;
@@ -42,6 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (navUsers) navUsers.style.display = 'none';
             const navAnalytics = document.getElementById('nav-analytics');
             if (navAnalytics) navAnalytics.style.display = 'none';
+            const navSubscribers = document.getElementById('nav-subscribers');
+            if (navSubscribers) navSubscribers.style.display = 'none';
+            const navComments = document.getElementById('nav-comments');
+            if (navComments) navComments.style.display = 'none';
             const userStat = document.getElementById('container-stat-users');
             if (userStat) userStat.style.display = 'none';
         }
@@ -166,7 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFiles(),
             isAdmin ? renderUsers() : Promise.resolve(),
             updateDashboardStats(),
-            isAdmin ? renderAnalytics() : Promise.resolve()
+            isAdmin ? renderAnalytics() : Promise.resolve(),
+            isAdmin ? renderSubscribers() : Promise.resolve(),
+            isAdmin ? renderComments() : Promise.resolve()
         ]);
     }
 
@@ -472,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <td style="padding: 1rem; color: white;">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        ${blog.image_url ? `<img src="${blog.image_url}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;">` : '<div style="width: 40px; height: 40px; background: #334155; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-image" style="font-size: 0.8rem;"></i></div>'}
+                        ${blog.image_url ? `<img src="${blog.image_url}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: contain; background: #1e293b;">` : '<div style="width: 40px; height: 40px; background: #334155; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-image" style="font-size: 0.8rem;"></i></div>'}
                         ${blog.title}
                     </div>
                 </td>
@@ -627,4 +637,180 @@ document.addEventListener('DOMContentLoaded', () => {
         await supabase.auth.signOut();
         window.location.href = 'index.html';
     });
+
+    // Subscribers Management
+    async function renderSubscribers() {
+        if (!isAdmin) return;
+        const subscribersTable = document.getElementById('subscribers-table');
+        const subscriberCount = document.getElementById('subscriber-count');
+
+        const { data: subscribers, error } = await supabase.from('subscribers').select('*').order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Subscribers fetch error:', error);
+            return;
+        }
+
+        if (subscriberCount) subscriberCount.innerText = subscribers ? subscribers.length : 0;
+
+        if (!subscribers || subscribers.length === 0) {
+            subscribersTable.innerHTML = '<tr><td colspan="4" style="padding: 2rem; text-align: center;">No subscribers yet.</td></tr>';
+            return;
+        }
+
+        subscribersTable.innerHTML = subscribers.map(sub => {
+            const date = new Date(sub.created_at).toLocaleDateString();
+            const statusColor = sub.status === 'active' ? '#10b981' : '#f87171';
+            const statusIcon = sub.status === 'active' ? 'fa-check-circle' : 'fa-ban';
+
+            return `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 1rem; color: white;">${sub.email}</td>
+                    <td style="padding: 1rem;">${date}</td>
+                    <td style="padding: 1rem;">
+                        <span style="color: ${statusColor}; font-size: 0.8rem; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid ${statusIcon}"></i> ${sub.status}
+                        </span>
+                    </td>
+                    <td style="padding: 1rem;">
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="toggleSubscriberStatus(${sub.id}, '${sub.status}')" title="${sub.status === 'active' ? 'Unsubscribe' : 'Reactivate'}" style="color: var(--secondary);">
+                                <i class="fa-solid ${sub.status === 'active' ? 'fa-user-slash' : 'fa-user-check'}"></i>
+                            </button>
+                            <button onclick="deleteSubscriber(${sub.id})" title="Delete Subscriber" style="color: #f87171;">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    window.deleteSubscriber = async function (id) {
+        if (confirm('Are you sure you want to delete this subscriber?')) {
+            const { error } = await supabase.from('subscribers').delete().eq('id', id);
+            if (error) alert(error.message);
+            else updateAllViews();
+        }
+    };
+
+    window.toggleSubscriberStatus = async function (id, currentStatus) {
+        const newStatus = currentStatus === 'active' ? 'unsubscribed' : 'active';
+        const { error } = await supabase.from('subscribers').update({ status: newStatus }).eq('id', id);
+
+        if (error) alert(error.message);
+        else {
+            updateAllViews();
+            alert(`Subscriber ${newStatus === 'active' ? 'reactivated' : 'unsubscribed'} successfully.`);
+        }
+    };
+
+    // Comments Management
+    async function renderComments() {
+        if (!isAdmin) {
+            console.log('renderComments: User is not admin, skipping');
+            return;
+        }
+
+        const commentsTable = document.getElementById('comments-table');
+        const pendingCount = document.getElementById('pending-count');
+
+        console.log('renderComments: Fetching comments...');
+
+        const { data: comments, error } = await supabase
+            .from('blog_comments')
+            .select('*, blogs(title)')
+            .order('created_at', { ascending: false });
+
+        console.log('renderComments: Fetch result:', { comments, error });
+
+        if (error) {
+            console.error('Comments fetch error:', error);
+            if (error.message.includes('relation "public.blog_comments" does not exist')) {
+                commentsTable.innerHTML = `
+                    <tr><td colspan="6" style="padding: 2rem; text-align: center;">
+                        <i class="fa-solid fa-database" style="font-size: 3rem; color: #f87171; margin-bottom: 1rem; display: block;"></i>
+                        <h3 style="color: #f87171;">Comments Table Missing</h3>
+                        <p style="color: var(--text-muted);">Please run the updated <b>setup.sql</b> in your Supabase SQL Editor to create the blog_comments table.</p>
+                    </td></tr>
+                `;
+            } else {
+                commentsTable.innerHTML = `<tr><td colspan="6" style="padding: 2rem; text-align: center; color: #f87171;">Error loading comments: ${error.message}</td></tr>`;
+            }
+            return;
+        }
+
+        const pending = comments ? comments.filter(c => c.status === 'pending').length : 0;
+        if (pendingCount) pendingCount.innerText = pending;
+
+        console.log('renderComments: Total comments:', comments?.length || 0, 'Pending:', pending);
+
+        if (!comments || comments.length === 0) {
+            commentsTable.innerHTML = '<tr><td colspan="6" style="padding: 2rem; text-align: center;">No comments yet.</td></tr>';
+            return;
+        }
+
+        commentsTable.innerHTML = comments.map(comment => {
+            const date = new Date(comment.created_at).toLocaleDateString();
+            const statusColor = comment.status === 'approved' ? '#10b981' : (comment.status === 'pending' ? '#f59e0b' : '#f87171');
+            const statusIcon = comment.status === 'approved' ? 'fa-check-circle' : (comment.status === 'pending' ? 'fa-clock' : 'fa-ban');
+            const truncatedComment = comment.comment_text.length > 50 ? comment.comment_text.substring(0, 50) + '...' : comment.comment_text;
+            const blogTitle = comment.blogs?.title || 'Unknown Blog';
+
+            return `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 1rem; color: white;">
+                        <div>
+                            <p style="font-weight: 600;">${comment.author_name}</p>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">${comment.author_email}</p>
+                        </div>
+                    </td>
+                    <td style="padding: 1rem; max-width: 200px;">
+                        <p title="${comment.comment_text}">${truncatedComment}</p>
+                    </td>
+                    <td style="padding: 1rem; font-size: 0.85rem;">${blogTitle}</td>
+                    <td style="padding: 1rem; font-size: 0.85rem;">${date}</td>
+                    <td style="padding: 1rem;">
+                        <span style="color: ${statusColor}; font-size: 0.8rem; text-transform: uppercase; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid ${statusIcon}"></i> ${comment.status}
+                        </span>
+                    </td>
+                    <td style="padding: 1rem;">
+                        <div style="display: flex; gap: 10px;">
+                            ${comment.status !== 'approved' ? `<button onclick="approveComment(${comment.id})" title="Approve" style="color: #10b981;"><i class="fa-solid fa-check"></i></button>` : ''}
+                            ${comment.status !== 'rejected' ? `<button onclick="rejectComment(${comment.id})" title="Reject" style="color: #f59e0b;"><i class="fa-solid fa-ban"></i></button>` : ''}
+                            <button onclick="deleteComment(${comment.id})" title="Delete" style="color: #f87171;"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    window.approveComment = async function (id) {
+        const { error } = await supabase.from('blog_comments').update({ status: 'approved' }).eq('id', id);
+        if (error) alert(error.message);
+        else {
+            updateAllViews();
+            alert('Comment approved and is now visible on the blog.');
+        }
+    };
+
+    window.rejectComment = async function (id) {
+        const { error } = await supabase.from('blog_comments').update({ status: 'rejected' }).eq('id', id);
+        if (error) alert(error.message);
+        else {
+            updateAllViews();
+            alert('Comment rejected and hidden from public view.');
+        }
+    };
+
+    window.deleteComment = async function (id) {
+        if (confirm('Are you sure you want to permanently delete this comment?')) {
+            const { error } = await supabase.from('blog_comments').delete().eq('id', id);
+            if (error) alert(error.message);
+            else updateAllViews();
+        }
+    };
 });

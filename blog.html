@@ -82,8 +82,8 @@
                     </div>
                 </div>
                 ${blog.image_url ? `
-                    <div style="width: 100%; border-radius: 1rem; margin-bottom: 3rem; overflow: hidden; max-height: 500px;">
-                        <img src="${blog.image_url}" style="width: 100%; height: auto; object-fit: cover; display: block;">
+                    <div style="width: 100%; border-radius: 1rem; margin-bottom: 3rem; overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center;">
+                        <img src="${blog.image_url}" style="width: 100%; height: auto; max-height: 600px; object-fit: contain; display: block;">
                     </div>
                 ` : `
                     <div style="height: 400px; background: #334155; border-radius: 1rem; margin-bottom: 3rem; display: flex; align-items: center; justify-content: center;">
@@ -103,6 +103,46 @@
                         <a id="download-link" href="#" target="_blank" class="btn btn-primary"><i class="fa-solid fa-download"></i> Download</a>
                     </div>
                 ` : ''}
+
+                <!-- Reactions Section -->
+                <div style="margin-top: 4rem; padding: 2rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                    <h3 style="margin-bottom: 1.5rem;">What did you think?</h3>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button onclick="addReaction('like')" class="btn btn-outline reaction-btn" data-type="like" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-thumbs-up"></i> Like <span id="count-like" class="reaction-count">0</span>
+                        </button>
+                        <button onclick="addReaction('love')" class="btn btn-outline reaction-btn" data-type="love" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-heart"></i> Love <span id="count-love" class="reaction-count">0</span>
+                        </button>
+                        <button onclick="addReaction('insightful')" class="btn btn-outline reaction-btn" data-type="insightful" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-lightbulb"></i> Insightful <span id="count-insightful" class="reaction-count">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comments Section -->
+                <div style="margin-top: 4rem;">
+                    <h3 style="margin-bottom: 2rem;">Comments <span id="comment-count" style="color: var(--text-muted); font-size: 1rem;">(0)</span></h3>
+                    
+                    <!-- Comment Form -->
+                    <form id="comment-form" class="glass-card" style="padding: 2rem; margin-bottom: 3rem;">
+                        <h4 style="margin-bottom: 1.5rem;">Leave a Comment</h4>
+                        <div style="display: grid; gap: 1rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <input type="text" id="comment-name" required placeholder="Your Name" style="padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                                <input type="email" id="comment-email" required placeholder="Your Email" style="padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                            </div>
+                            <textarea id="comment-text" required placeholder="Share your thoughts..." style="padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white; min-height: 120px; resize: vertical;"></textarea>
+                            <button type="submit" class="btn btn-primary" style="justify-self: start;">
+                                <i class="fa-solid fa-paper-plane"></i> Post Comment
+                            </button>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">Your comment will be reviewed before being published.</p>
+                        </div>
+                    </form>
+
+                    <!-- Comments List -->
+                    <div id="comments-list"></div>
+                </div>
             `;
 
             if (blog.file_id) {
@@ -113,9 +153,13 @@
                 }
             }
 
+
             // Increment view count
             await supabase.rpc('increment_view_count', { blog_id: blogId });
-            // Fallback if RPC not defined: await supabase.from('blogs').update({ views: (blog.views || 0) + 1 }).eq('id', blogId);
+
+            // Load reactions and comments
+            await loadReactions(blogId);
+            await loadComments(blogId);
 
             // Adjust nav button if logged in
             const { data: { session } } = await supabase.auth.getSession();
@@ -126,7 +170,157 @@
                     navBtn.href = 'dashboard.html';
                 }
             }
+
+            // Attach comment form event listener (after form is created)
+            const commentForm = document.getElementById('comment-form');
+            if (commentForm) {
+                commentForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    try {
+                        console.log('Comment form submitted');
+
+                        const name = document.getElementById('comment-name').value;
+                        const email = document.getElementById('comment-email').value;
+                        const text = document.getElementById('comment-text').value;
+
+                        console.log('Submitting comment:', { blogId, name, email });
+
+                        const { data, error } = await supabase.from('blog_comments').insert([{
+                            blog_id: blogId,
+                            author_name: name,
+                            author_email: email,
+                            comment_text: text,
+                            status: 'pending'
+                        }]);
+
+                        console.log('Comment submission result:', { data, error });
+
+                        if (error) {
+                            console.error('Comment submission error:', error);
+                            alert('Failed to submit comment: ' + error.message);
+                        } else {
+                            console.log('Comment submitted successfully');
+                            alert('✅ Thank you! Your comment has been submitted and is awaiting approval.');
+                            e.target.reset();
+                            // Reload comments to show the count (though it won't show until approved)
+                            await loadComments(blogId);
+                        }
+                    } catch (err) {
+                        console.error('Unexpected error during comment submission:', err);
+                        alert('An unexpected error occurred. Please try again.');
+                    }
+                });
+            }
         });
+
+        // User identifier (simple IP-based or session-based)
+        function getUserIdentifier() {
+            let userId = localStorage.getItem('user_identifier');
+            if (!userId) {
+                userId = 'user_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('user_identifier', userId);
+            }
+            return userId;
+        }
+
+        // Load and display reactions
+        async function loadReactions(blogId) {
+            const { data: reactions } = await supabase.from('blog_reactions').select('*').eq('blog_id', blogId);
+
+            const counts = { like: 0, love: 0, insightful: 0 };
+            const userReactions = new Set();
+            const userId = getUserIdentifier();
+
+            if (reactions) {
+                reactions.forEach(r => {
+                    counts[r.reaction_type]++;
+                    if (r.user_identifier === userId) {
+                        userReactions.add(r.reaction_type);
+                    }
+                });
+            }
+
+            // Update counts
+            document.getElementById('count-like').innerText = counts.like;
+            document.getElementById('count-love').innerText = counts.love;
+            document.getElementById('count-insightful').innerText = counts.insightful;
+
+            // Highlight user's reactions
+            userReactions.forEach(type => {
+                const btn = document.querySelector(`[data-type="${type}"]`);
+                if (btn) btn.style.borderColor = 'var(--primary)';
+            });
+        }
+
+        // Add reaction
+        window.addReaction = async function (type) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const blogId = urlParams.get('id');
+            const userId = getUserIdentifier();
+
+            // Check if already reacted
+            const { data: existing } = await supabase.from('blog_reactions')
+                .select('*')
+                .eq('blog_id', blogId)
+                .eq('user_identifier', userId)
+                .eq('reaction_type', type)
+                .single();
+
+            if (existing) {
+                // Remove reaction
+                await supabase.from('blog_reactions').delete().eq('id', existing.id);
+            } else {
+                // Add reaction
+                await supabase.from('blog_reactions').insert([{
+                    blog_id: blogId,
+                    reaction_type: type,
+                    user_identifier: userId
+                }]);
+            }
+
+            await loadReactions(blogId);
+        };
+
+        // Load and display comments
+        async function loadComments(blogId) {
+            const { data: comments } = await supabase.from('blog_comments')
+                .select('*')
+                .eq('blog_id', blogId)
+                .eq('status', 'approved')
+                .order('created_at', { ascending: false });
+
+            const commentsList = document.getElementById('comments-list');
+            const commentCount = document.getElementById('comment-count');
+
+            if (!comments || comments.length === 0) {
+                commentsList.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">No comments yet. Be the first to share your thoughts!</p>';
+                commentCount.innerText = '(0)';
+                return;
+            }
+
+            commentCount.innerText = `(${comments.length})`;
+
+            commentsList.innerHTML = comments.map(c => {
+                const date = new Date(c.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric'
+                });
+                return `
+                    <div class="glass-card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                            <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">
+                                ${c.author_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <p style="font-weight: 600; color: white;">${c.author_name}</p>
+                                <p style="font-size: 0.8rem; color: var(--text-muted);">${date}</p>
+                            </div>
+                        </div>
+                        <p style="color: var(--text-muted); line-height: 1.6;">${c.comment_text}</p>
+                    </div>
+                `;
+            }).join('');
+        }
     </script>
 </body>
 

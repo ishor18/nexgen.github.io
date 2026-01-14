@@ -88,7 +88,21 @@
     <!-- Latest Blogs -->
     <section id="blogs" class="section">
         <div class="container">
-            <h2 class="section-title">Featured Insights</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 class="section-title" style="margin: 0;">Featured Insights</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button data-sort="date" class="btn btn-outline active"
+                        style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        <i class="fa-solid fa-calendar"></i> Latest
+                    </button>
+                    <button data-sort="views" class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        <i class="fa-solid fa-fire"></i> Most Viewed
+                    </button>
+                    <button data-sort="name" class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        <i class="fa-solid fa-arrow-down-a-z"></i> A-Z
+                    </button>
+                </div>
+            </div>
             <div id="blog-container" class="grid grid-cols-3">
                 <!-- Blogs will be injected here -->
                 <div class="glass-card">
@@ -171,10 +185,39 @@
 
     <script src="main.js"></script>
     <script>
-        document.getElementById('newsletter-form').addEventListener('submit', (e) => {
+        // Newsletter Subscription Handler
+        document.getElementById('newsletter-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            alert('Thanks for subscribing (simulation)!');
-            e.target.reset();
+            const emailInput = e.target.querySelector('input[type="email"]');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const email = emailInput.value.trim();
+
+            // Disable button during submission
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Subscribing...';
+
+            try {
+                const { data, error } = await supabase.from('subscribers').insert([
+                    { email: email }
+                ]);
+
+                if (error) {
+                    if (error.message.includes('duplicate') || error.code === '23505') {
+                        alert('You are already subscribed! 🎉');
+                    } else {
+                        alert('Subscription failed: ' + error.message);
+                    }
+                } else {
+                    alert('🎉 Thanks for subscribing! You\'ll receive our latest updates.');
+                    e.target.reset();
+                }
+            } catch (err) {
+                alert('An unexpected error occurred. Please try again.');
+                console.error('Newsletter subscription error:', err);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Subscribe';
+            }
         });
     </script>
 </body>
