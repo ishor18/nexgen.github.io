@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth State Display
     async function updateAuthUI() {
         const { data: { session } } = await supabase.auth.getSession();
-        const loginBtn = document.querySelector('a[href="auth.html"] .btn');
+        const loginBtn = document.querySelector('a[href="auth.html"]');
 
         if (session && loginBtn) {
             loginBtn.innerText = 'Dashboard';
