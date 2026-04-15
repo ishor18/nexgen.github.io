@@ -12,12 +12,11 @@
 </head>
 
 <body>
-    <nav class="glass" style="position: sticky; top: 1rem; z-index: 1000; margin: 1rem; padding: 1rem;">
-        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
-            <a href="index.html" style="font-size: 1.5rem; font-weight: 700; font-family: 'Outfit';">
-                Nex<span style="color: var(--primary);">Gen</span>
-            </a>
-            <div style="display: flex; gap: 2rem; align-items: center;">
+    <nav class="glass navbar-main">
+        <div class="container nav-container">
+            <a href="index.html" class="nav-brand">Nex<span>Gen</span></a>
+            <button class="hamburger" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
+            <div class="nav-menu" id="nav-menu">
                 <a href="index.html#blogs">All Blogs</a>
                 <a href="auth.html" class="btn btn-outline" id="nav-btn">Login</a>
             </div>
@@ -51,6 +50,13 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
+            // Mobile nav toggle
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const navMenu = document.getElementById('nav-menu');
+            if (hamburgerBtn && navMenu) {
+                hamburgerBtn.addEventListener('click', () => navMenu.classList.toggle('active'));
+            }
+
             const urlParams = new URLSearchParams(window.location.search);
             const blogId = urlParams.get('id');
             const container = document.getElementById('blog-content-area');
@@ -69,6 +75,10 @@
 
             document.title = `${blog.title} | NexGen`;
 
+            const authorName = blog.author_name || 'NexGen Author';
+            const wordCount = (blog.content || '').split(/\s+/).filter(Boolean).length;
+            const readTime = Math.max(1, Math.ceil(wordCount / 200));
+
             container.innerHTML = `
                 <small style="color: var(--primary); text-transform: uppercase; font-weight: 600;">${blog.category}</small>
                 <h1 style="font-size: 3.5rem; margin: 1rem 0 2rem;">${blog.title}</h1>
@@ -77,8 +87,8 @@
                         <i class="fa-solid fa-user"></i>
                     </div>
                     <div>
-                        <p style="color: var(--text); font-weight: 500;">Admin User</p>
-                        <p style="font-size: 0.8rem;">${blog.date} • 5 min read</p>
+                        <p style="color: var(--text); font-weight: 500;">${authorName}</p>
+                        <p style="font-size: 0.8rem;">${blog.date} • ${readTime} min read</p>
                     </div>
                 </div>
                 ${blog.image_url ? `

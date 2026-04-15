@@ -10,238 +10,304 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="supabase.js"></script>
+    <style>
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-published { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge-draft     { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+        .badge-suspended { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+        .badge-active    { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge-pending   { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+        .badge-approved  { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge-rejected  { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+        .badge-superadmin{ background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+        .badge-admin     { background: rgba(37,99,235,0.15);  color: #60a5fa; border: 1px solid rgba(37,99,235,0.3); }
+        .badge-user      { background: rgba(100,116,139,0.15);color: #94a3b8; border: 1px solid rgba(100,116,139,0.3);}
+
+        .icon-btn {
+            background: none; border: none; cursor: pointer;
+            padding: 0.4rem 0.5rem; border-radius: 0.4rem;
+            transition: background 0.2s;
+            font-size: 0.9rem;
+        }
+        .icon-btn:hover { background: rgba(255,255,255,0.08); }
+
+        /* Suspension modal */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.8); z-index: 3000;
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(6px);
+        }
+        .modal-box {
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 1rem; padding: 2rem; width: 90%; max-width: 480px;
+            animation: fadeUp 0.3s ease;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .modal-box h3 { margin-bottom: 1.5rem; font-size: 1.2rem; }
+        .modal-box label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--text-muted); }
+        .modal-box select, .modal-box input, .modal-box textarea {
+            width: 100%; padding: 0.7rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 0.5rem; color: white;
+            font-family: inherit; margin-bottom: 1rem;
+        }
+        .modal-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
+        .modal-actions .btn { flex: 1; justify-content: center; }
+
+        /* Withdrawal request card  */
+        .withdraw-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.75rem; padding: 1.25rem;
+            margin-bottom: 1rem;
+            display: flex; align-items: center; gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .withdraw-card .amount { font-size: 1.5rem; font-weight: 700; color: #10b981; min-width: 100px; }
+        .withdraw-card .meta   { flex: 1; }
+        .withdraw-card .meta p { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+
+        /* Earnings breakdown table */
+        .earnings-row td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem; }
+
+        /* Sidebar role badge */
+        #role-badge { font-size: 0.7rem; padding: 0.2rem 0.75rem; border-radius: 2rem; margin-top: 0.5rem; display: inline-block; }
+    </style>
 </head>
 
 <body style="background: #0f172a;">
     <div style="display: flex; min-height: 100vh;">
-        <!-- Sidebar -->
-        <aside class="glass" style="width: 280px; margin: 1rem; padding: 2rem; display: flex; flex-direction: column;">
-            <a href="index.html"
-                style="font-size: 1.5rem; font-weight: 700; font-family: 'Outfit'; margin-bottom: 3rem;">
-                Nex<span style="color: var(--primary);">Gen</span>
-            </a>
 
-            <nav id="sidebar-nav" style="display: grid; gap: 0.5rem; flex-grow: 1;">
+        <!-- ==================== SIDEBAR ==================== -->
+        <aside class="glass" style="width: 260px; min-width: 260px; margin: 1rem; padding: 1.75rem 1.25rem; display: flex; flex-direction: column; gap: 0;">
+            <a href="index.html" style="font-size: 1.5rem; font-weight: 700; font-family: 'Outfit'; margin-bottom: 0.25rem;">
+                Nex<span style="color: var(--primary);">Gen</span>
+                <span class="rt-pulse" title="Live — real-time updates active"></span>
+            </a>
+            <span id="role-badge" class="badge">User</span>
+            <div id="user-info" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1.5rem; margin-top: 0.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
+
+            <nav id="sidebar-nav" style="display: grid; gap: 0.35rem; flex-grow: 1;">
                 <button class="btn btn-outline nav-item active" data-view="dashboard-view">
                     <i class="fa-solid fa-gauge"></i> Dashboard
                 </button>
                 <button class="btn btn-outline nav-item" data-view="blogs-view">
                     <i class="fa-solid fa-pen-to-square"></i> Manage Blogs
                 </button>
-                <button class="btn btn-outline nav-item" data-view="files-view">
-                    <i class="fa-solid fa-folder-open"></i> File Manager
+                <button class="btn btn-outline nav-item" data-view="earnings-view">
+                    <i class="fa-solid fa-money-bill-trend-up"></i> Earnings
                 </button>
                 <button class="btn btn-outline nav-item" data-view="wallet-view">
                     <i class="fa-solid fa-wallet"></i> My Wallet
                 </button>
-                <button class="btn btn-outline nav-item" data-view="users-view" id="nav-users" style="display: none;">
-                    <i class="fa-solid fa-users"></i> Platform Users
+                <button class="btn btn-outline nav-item" data-view="files-view">
+                    <i class="fa-solid fa-folder-open"></i> File Manager
                 </button>
-                <button class="btn btn-outline nav-item" data-view="analytics-view" id="nav-analytics"
-                    style="display: none;">
-                    <i class="fa-solid fa-chart-simple"></i> Analytics
-                </button>
-                <button class="btn btn-outline nav-item" data-view="subscribers-view" id="nav-subscribers"
-                    style="display: none;">
-                    <i class="fa-solid fa-envelope"></i> Subscribers
-                </button>
-                <button class="btn btn-outline nav-item" data-view="comments-view" id="nav-comments"
-                    style="display: none;">
-                    <i class="fa-solid fa-comments"></i> Comments
-                </button>
-                <button class="btn btn-outline nav-item" data-view="settings-view">
+
+                <!-- Super Admin only -->
+                <div id="superadmin-section" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                    <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding: 0 0.5rem; margin-bottom: 0.5rem;">Super Admin</p>
+                    <button class="btn btn-outline nav-item" data-view="users-view" id="nav-users">
+                        <i class="fa-solid fa-users"></i> Platform Users
+                    </button>
+                    <button class="btn btn-outline nav-item" data-view="withdrawals-view" id="nav-withdrawals">
+                        <i class="fa-solid fa-money-bill-transfer"></i> Withdrawals
+                        <span id="pending-withdrawals-badge" style="background: #f59e0b; color: black; border-radius: 2rem; padding: 0.1rem 0.5rem; font-size: 0.65rem; margin-left: auto;">0</span>
+                    </button>
+                    <button class="btn btn-outline nav-item" data-view="analytics-view" id="nav-analytics">
+                        <i class="fa-solid fa-chart-simple"></i> Analytics
+                    </button>
+                    <button class="btn btn-outline nav-item" data-view="subscribers-view" id="nav-subscribers">
+                        <i class="fa-solid fa-envelope"></i> Subscribers
+                    </button>
+                    <button class="btn btn-outline nav-item" data-view="comments-view" id="nav-comments">
+                        <i class="fa-solid fa-comments"></i> Comments
+                    </button>
+                    <button class="btn btn-outline nav-item" data-view="ads-view" id="nav-ads">
+                        <i class="fa-solid fa-rectangle-ad"></i> Advertisements
+                    </button>
+                    <button class="btn btn-outline nav-item" data-view="messages-view" id="nav-messages">
+                        <i class="fa-solid fa-inbox"></i> Messages
+                    </button>
+                </div>
+
+                <button class="btn btn-outline nav-item" data-view="settings-view" style="margin-top: 0.5rem;">
                     <i class="fa-solid fa-gear"></i> Settings
                 </button>
             </nav>
 
-            <button id="logout-btn" class="btn btn-outline"
-                style="margin-top: 3rem; color: #f87171; border-color: rgba(248, 113, 113, 0.2);">
+            <button id="logout-btn" class="btn btn-outline" style="margin-top: 1.5rem; color: #f87171; border-color: rgba(248,113,113,0.2);">
                 <i class="fa-solid fa-right-from-bracket"></i> Logout
             </button>
         </aside>
 
-        <!-- Main Content -->
-        <main style="flex-grow: 1; padding: 2rem 3rem 2rem 1rem;">
-            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
+        <!-- ==================== MAIN CONTENT ==================== -->
+        <main style="flex-grow: 1; padding: 2rem 3rem 2rem 1rem; overflow-x: hidden;">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; flex-wrap: wrap; gap: 1rem;">
                 <div>
-                    <h1 id="view-title" style="font-size: 2rem;">My <span
-                            style="color: var(--primary);">Workspace</span></h1>
-                    <p id="view-subtitle" style="color: var(--text-muted);">Welcome back to your creator hub.</p>
+                    <h1 id="view-title" style="font-size: 2rem; margin: 0;">My <span style="color: var(--primary);">Workspace</span></h1>
+                    <p id="view-subtitle" style="color: var(--text-muted); margin: 0.25rem 0 0;">Manage your content and track your performance.</p>
                 </div>
                 <div id="header-actions" style="display: flex; gap: 1rem;">
-                    <button id="open-file-modal" class="btn btn-outline"><i class="fa-solid fa-plus"></i> Upload
-                        File</button>
-                    <button id="open-blog-modal" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Blog
-                        Post</button>
+                    <button id="open-file-modal" class="btn btn-outline"><i class="fa-solid fa-upload"></i> Upload File</button>
+                    <button id="open-blog-modal" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Blog Post</button>
                 </div>
             </header>
 
-            <!-- Dashboard View -->
+            <!-- ===== DASHBOARD VIEW ===== -->
             <div id="dashboard-view" class="admin-view">
                 <div class="glass-card">
                     <h3 style="margin-bottom: 1.5rem;">Quick Stats</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                        <div
-                            style="background: rgba(37, 99, 235, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
-                            <p style="font-size: 0.9rem; color: var(--text-muted);">Total Blogs</p>
-                            <p id="stat-blogs" style="font-size: 2rem; font-weight: 600;">0</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                        <div style="background: rgba(37,99,235,0.1); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(37,99,235,0.3);">
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Total Blogs</p>
+                            <p id="stat-blogs" style="font-size: 2.2rem; font-weight: 700; margin: 0.25rem 0 0;">0</p>
                         </div>
-                        <div id="container-stat-users"
-                            style="background: rgba(37, 99, 235, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid var(--primary);">
-                            <p style="font-size: 0.9rem; color: var(--text-muted);">Total Users</p>
-                            <p id="stat-users" style="font-size: 2rem; font-weight: 600;">0</p>
+                        <div id="container-stat-users" style="background: rgba(139,92,246,0.1); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(139,92,246,0.3); display: none;">
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Platform Users</p>
+                            <p id="stat-users" style="font-size: 2.2rem; font-weight: 700; margin: 0.25rem 0 0;">0</p>
                         </div>
-                        <div
-                            style="background: rgba(16, 185, 129, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #10b981;">
-                            <p style="font-size: 0.9rem; color: var(--text-muted);">Files Uploaded</p>
-                            <p id="stat-files" style="font-size: 2rem; font-weight: 600;">0</p>
+                        <div style="background: rgba(16,185,129,0.1); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(16,185,129,0.3);">
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Files Uploaded</p>
+                            <p id="stat-files" style="font-size: 2.2rem; font-weight: 700; margin: 0.25rem 0 0;">0</p>
                         </div>
-                        <div
-                            style="background: rgba(245, 158, 11, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #f59e0b;">
-                            <p style="font-size: 0.9rem; color: var(--text-muted);">Total Blog Views</p>
-                            <p id="stat-views" style="font-size: 2rem; font-weight: 600;">0</p>
+                        <div style="background: rgba(245,158,11,0.1); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(245,158,11,0.3);">
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Total Blog Views</p>
+                            <p id="stat-views" style="font-size: 2.2rem; font-weight: 700; margin: 0.25rem 0 0;">0</p>
                         </div>
-                        <div
-                            style="background: rgba(16, 185, 129, 0.1); padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #10b981;">
-                            <p style="font-size: 0.9rem; color: var(--text-muted);">Est. Earnings</p>
-                            <p id="stat-earnings" style="font-size: 2rem; font-weight: 600;">Rs. 0.00</p>
+                        <div style="background: rgba(16,185,129,0.1); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(16,185,129,0.3);">
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Est. Earnings</p>
+                            <p id="stat-earnings" style="font-size: 2.2rem; font-weight: 700; margin: 0.25rem 0 0;">Rs. 0.00</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="glass-card" style="margin-top: 3rem;">
+                <div class="glass-card" style="margin-top: 2rem;">
                     <h3 style="margin-bottom: 1.5rem;">Recent Activity</h3>
-                    <ul style="list-style: none; padding: 0;">
-                        <li style="padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">New blog post
-                            "The Future of AI" published.</li>
-                        <li style="padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">User 'john.doe'
-                            registered.</li>
-                        <li style="padding: 0.75rem 0;">File 'report_q3.pdf' uploaded.</li>
+                    <ul id="recent-activity-list" style="list-style: none; padding: 0; margin: 0;">
+                        <li style="padding: 0.75rem 0; color: var(--text-muted);">Loading activity...</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- Analytics View -->
-            <div id="analytics-view" class="admin-view" style="display: none;">
-                <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
-                    <button id="simulate-data-btn" class="btn btn-outline"
-                        style="font-size: 0.8rem; border-color: var(--primary);">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Simulate Visitor Data
-                    </button>
-                </div>
-                <div id="no-analytics-data" class="glass-card"
-                    style="display: none; text-align: center; padding: 4rem; margin-bottom: 1.5rem;">
-                    <i class="fa-solid fa-chart-area"
-                        style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
-                    <h3>No Visitor Data Yet</h3>
-                    <p style="color: var(--text-muted);">Visitor data will appear here once someone visits your
-                        homepage.</p>
-                </div>
-                <div id="analytics-grid"
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-                    <!-- Source Distribution -->
-                    <div class="glass-card">
-                        <h4 style="margin-bottom: 1rem;">Traffic Source (Mail vs Random)</h4>
-                        <canvas id="sourceChart"></canvas>
-                    </div>
-                    <!-- Traffic Type -->
-                    <div class="glass-card">
-                        <h4 style="margin-bottom: 1rem;">Visit Method (Link vs Direct)</h4>
-                        <canvas id="typeChart"></canvas>
-                    </div>
-                    <!-- Age Distribution -->
-                    <div class="glass-card">
-                        <h4 style="margin-bottom: 1rem;">Age Groups</h4>
-                        <canvas id="ageChart"></canvas>
-                    </div>
-                    <!-- Gender Distribution -->
-                    <div class="glass-card">
-                        <h4 style="margin-bottom: 1rem;">Gender Distribution</h4>
-                        <canvas id="genderChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Advanced Stats Table -->
-                <div class="glass-card" style="margin-top: 1.5rem;">
-                    <h4 style="margin-bottom: 1rem;">Technical Visitor Insight</h4>
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; text-align: center;">
-                        <div style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
-                            <p style="font-size: 0.8rem; color: var(--text-muted);">Top Browser</p>
-                            <p id="top-browser" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">
-                                Loading...</p>
-                        </div>
-                        <div style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
-                            <p style="font-size: 0.8rem; color: var(--text-muted);">Main Device</p>
-                            <p id="top-device" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">
-                                Loading...</p>
-                        </div>
-                        <div style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
-                            <p style="font-size: 0.8rem; color: var(--text-muted);">Primary Location</p>
-                            <p id="top-location" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">
-                                Loading...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Wallet View -->
-            <div id="wallet-view" class="admin-view" style="display: none;">
-                <div class="glass-card" style="max-width: 500px; margin: 0 auto; text-align: center; padding: 3rem;">
-                    <i class="fa-solid fa-wallet"
-                        style="font-size: 4rem; color: var(--primary); margin-bottom: 2rem;"></i>
-                    <h2 style="margin-bottom: 1rem;">My Wallet</h2>
-                    <div
-                        style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 1rem; margin-bottom: 2rem;">
-                        <p style="color: var(--text-muted); margin-bottom: 0.5rem;">Available Balance</p>
-                        <h1 id="wallet-balance" style="font-size: 3rem;">Rs. 0.00</h1>
-                    </div>
-                    <button id="withdraw-btn" class="btn btn-primary" style="width: 100%; padding: 1rem;">Withdraw
-                        Funds</button>
-                    <p style="margin-top: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">Minimum withdrawal:
-                        Rs. 10.00</p>
-                </div>
-            </div>
-
-
-            <!-- Blogs View -->
+            <!-- ===== BLOGS VIEW ===== -->
             <div id="blogs-view" class="admin-view" style="display: none;">
-                <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.9rem;">
-                    <thead>
-                        <tr style="text-align: left; border-bottom: 1px solid var(--border);">
-                            <th style="padding: 1rem;">Title</th>
-                            <th style="padding: 1rem;">Category</th>
-                            <th style="padding: 1rem;">Date</th>
-                            <th style="padding: 1rem;">Status</th>
-                            <th style="padding: 1rem;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-blog-table"></tbody>
-                </table>
+                <div class="glass-card" style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.88rem; min-width: 700px;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                                <th style="padding: 1rem;">Title</th>
+                                <th style="padding: 1rem;">Category</th>
+                                <th style="padding: 1rem;">Date</th>
+                                <th style="padding: 1rem;">Views</th>
+                                <th style="padding: 1rem;">Earnings</th>
+                                <th style="padding: 1rem;">Status</th>
+                                <th style="padding: 1rem;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-blog-table"></tbody>
+                    </table>
+                </div>
             </div>
 
-            <!-- Files View -->
+            <!-- ===== EARNINGS BREAKDOWN VIEW ===== -->
+            <div id="earnings-view" class="admin-view" style="display: none;">
+                <div class="glass-card" style="margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 0.5rem;">Earnings Summary</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Estimated earnings are calculated at <strong style="color: var(--primary);">Rs. 1.00 per 100 views</strong>.</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                        <div style="background: rgba(16,185,129,0.1); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(16,185,129,0.3); text-align: center;">
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Total Earned</p>
+                            <p id="earn-total" style="font-size: 2rem; font-weight: 700; color: #10b981;">Rs. 0.00</p>
+                        </div>
+                        <div style="background: rgba(239,68,68,0.1); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(239,68,68,0.3); text-align: center;">
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Total Withdrawn</p>
+                            <p id="earn-withdrawn" style="font-size: 2rem; font-weight: 700; color: #f87171;">Rs. 0.00</p>
+                        </div>
+                        <div style="background: rgba(37,99,235,0.1); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(37,99,235,0.3); text-align: center;">
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">Available Balance</p>
+                            <p id="earn-available" style="font-size: 2rem; font-weight: 700; color: var(--primary);">Rs. 0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="overflow-x: auto;">
+                    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-list-check" style="margin-right: 0.5rem; color: var(--primary);"></i>Per-Blog Breakdown</h3>
+                    <table style="width: 100%; border-collapse: collapse; min-width: 500px;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">
+                                <th style="padding: 0.75rem 1rem;">Blog Title</th>
+                                <th style="padding: 0.75rem 1rem;">Category</th>
+                                <th style="padding: 0.75rem 1rem;">Views</th>
+                                <th style="padding: 0.75rem 1rem;">Est. Earnings</th>
+                                <th style="padding: 0.75rem 1rem;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="earnings-blog-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== WALLET VIEW ===== -->
+            <div id="wallet-view" class="admin-view" style="display: none;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; max-width: 800px;">
+                    <div class="glass-card" style="text-align: center; padding: 2.5rem;">
+                        <i class="fa-solid fa-wallet" style="font-size: 3.5rem; color: var(--primary); margin-bottom: 1.5rem;"></i>
+                        <h2 style="margin-bottom: 0.5rem;">My Wallet</h2>
+                        <div style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 1rem; margin-bottom: 1.5rem;">
+                            <p style="color: var(--text-muted); margin-bottom: 0.5rem; font-size: 0.9rem;">Available Balance</p>
+                            <h1 id="wallet-balance" style="font-size: 2.5rem; margin: 0; color: #10b981;">Rs. 0.00</h1>
+                        </div>
+                        <button id="open-withdraw-modal" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem;">
+                            <i class="fa-solid fa-arrow-up-from-bracket"></i> Request Withdrawal
+                        </button>
+                        <p style="margin-top: 1rem; color: var(--text-muted); font-size: 0.85rem;">Minimum withdrawal: Rs. 10.00</p>
+                    </div>
+
+                    <div class="glass-card">
+                        <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-clock-rotate-left" style="margin-right: 0.5rem;"></i>My Requests</h3>
+                        <div id="my-withdrawal-list" style="max-height: 400px; overflow-y: auto;">
+                            <p style="color: var(--text-muted); font-size: 0.9rem;">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== FILES VIEW ===== -->
             <div id="files-view" class="admin-view" style="display: none;">
                 <div class="glass-card">
                     <h3 style="margin-bottom: 1.5rem;">File Explorer</h3>
-                    <div id="file-list"
-                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
-                    </div>
+                    <div id="file-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;"></div>
                 </div>
             </div>
 
-            <!-- Users View -->
+            <!-- ===== USERS VIEW (Superadmin) ===== -->
             <div id="users-view" class="admin-view" style="display: none;">
-                <div class="glass-card">
-                    <h3 style="margin-bottom: 1.5rem;">Platform Users</h3>
-                    <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.9rem;">
+                <div class="glass-card" style="overflow-x: auto;">
+                    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-users" style="margin-right: 0.5rem;"></i>Platform Users</h3>
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.88rem; min-width: 900px;">
                         <thead>
                             <tr style="text-align: left; border-bottom: 1px solid var(--border);">
                                 <th style="padding: 1rem;">Name</th>
                                 <th style="padding: 1rem;">Email</th>
                                 <th style="padding: 1rem;">Role</th>
+                                <th style="padding: 1rem;">Views</th>
                                 <th style="padding: 1rem;">Earnings</th>
                                 <th style="padding: 1rem;">Withdrawn</th>
+                                <th style="padding: 1rem;">Status</th>
                                 <th style="padding: 1rem;">Actions</th>
                             </tr>
                         </thead>
@@ -250,11 +316,73 @@
                 </div>
             </div>
 
-            <!-- Subscribers View -->
+            <!-- ===== WITHDRAWALS VIEW (Superadmin) ===== -->
+            <div id="withdrawals-view" class="admin-view" style="display: none;">
+                <div class="glass-card" style="overflow-x: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                        <h3><i class="fa-solid fa-money-bill-transfer" style="margin-right: 0.5rem;"></i>Withdrawal Requests</h3>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">
+                            Pending: <span id="withdrawal-pending-count" style="color: #f59e0b; font-weight: 700;">0</span>
+                        </div>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.88rem; min-width: 750px;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                                <th style="padding: 1rem;">User</th>
+                                <th style="padding: 1rem;">Amount</th>
+                                <th style="padding: 1rem;">Method</th>
+                                <th style="padding: 1rem;">Details</th>
+                                <th style="padding: 1rem;">Requested</th>
+                                <th style="padding: 1rem;">Status</th>
+                                <th style="padding: 1rem;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="withdrawals-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== ANALYTICS VIEW (Superadmin) ===== -->
+            <div id="analytics-view" class="admin-view" style="display: none;">
+                <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
+                    <button id="simulate-data-btn" class="btn btn-outline" style="font-size: 0.8rem; border-color: var(--primary);">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Simulate Visitor Data
+                    </button>
+                </div>
+                <div id="no-analytics-data" class="glass-card" style="display: none; text-align: center; padding: 4rem; margin-bottom: 1.5rem;">
+                    <i class="fa-solid fa-chart-area" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                    <h3>No Visitor Data Yet</h3>
+                    <p style="color: var(--text-muted);">Visitor data will appear here once someone visits your homepage.</p>
+                </div>
+                <div id="analytics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                    <div class="glass-card"><h4 style="margin-bottom: 1rem;">Traffic Source</h4><canvas id="sourceChart"></canvas></div>
+                    <div class="glass-card"><h4 style="margin-bottom: 1rem;">Visit Method</h4><canvas id="typeChart"></canvas></div>
+                    <div class="glass-card"><h4 style="margin-bottom: 1rem;">Age Groups</h4><canvas id="ageChart"></canvas></div>
+                    <div class="glass-card"><h4 style="margin-bottom: 1rem;">Gender Distribution</h4><canvas id="genderChart"></canvas></div>
+                </div>
+                <div class="glass-card" style="margin-top: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem;">Technical Visitor Insight</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; text-align: center;">
+                        <div style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">Top Browser</p>
+                            <p id="top-browser" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">Loading...</p>
+                        </div>
+                        <div style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">Main Device</p>
+                            <p id="top-device" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">Loading...</p>
+                        </div>
+                        <div style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
+                            <p style="font-size: 0.8rem; color: var(--text-muted);">Primary Location</p>
+                            <p id="top-location" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SUBSCRIBERS VIEW ===== -->
             <div id="subscribers-view" class="admin-view" style="display: none;">
-                <div class="glass-card">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div class="glass-card" style="overflow-x: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                         <h3><i class="fa-solid fa-envelope"></i> Newsletter Subscribers</h3>
                         <div style="color: var(--text-muted); font-size: 0.9rem;">
                             Total: <span id="subscriber-count" style="color: var(--primary); font-weight: 600;">0</span>
@@ -274,11 +402,10 @@
                 </div>
             </div>
 
-            <!-- Comments View -->
+            <!-- ===== COMMENTS VIEW ===== -->
             <div id="comments-view" class="admin-view" style="display: none;">
-                <div class="glass-card">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div class="glass-card" style="overflow-x: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                         <h3><i class="fa-solid fa-comments"></i> Blog Comments</h3>
                         <div style="color: var(--text-muted); font-size: 0.9rem;">
                             Pending: <span id="pending-count" style="color: #f59e0b; font-weight: 600;">0</span>
@@ -300,20 +427,18 @@
                 </div>
             </div>
 
-            <!-- Settings View -->
+            <!-- ===== SETTINGS VIEW ===== -->
             <div id="settings-view" class="admin-view" style="display: none;">
                 <div class="glass-card" style="max-width: 500px;">
                     <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-shield-halved"></i> Security Settings</h3>
                     <form id="change-password-form" style="display: grid; gap: 1rem;">
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">New
-                                Password</label>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">New Password</label>
                             <input type="password" id="new-password" required placeholder="Min 6 characters"
                                 style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
                         </div>
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Confirm
-                                Password</label>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Confirm Password</label>
                             <input type="password" id="confirm-password" required placeholder="••••••••"
                                 style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
                         </div>
@@ -321,73 +446,240 @@
                     </form>
                 </div>
             </div>
+
+            <!-- ===== ADS VIEW ===== -->
+            <div id="ads-view" class="admin-view" style="display: none;">
+                <div class="glass-card" style="max-width: 600px; margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-rectangle-ad"></i> Create New Ad</h3>
+                    <form id="new-ad-form" style="display: grid; gap: 1rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem;">Ad Image</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="url" id="ad-image-url" placeholder="Paste image URL here..." required
+                                    style="flex: 1; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                                <button type="button" id="upload-ad-image-btn" class="btn btn-outline" style="padding: 0 1rem;"><i class="fa-solid fa-upload"></i></button>
+                            </div>
+                            <input type="file" id="ad-image-file" accept="image/*" style="display: none;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem;">Redirect URL (Optional)</label>
+                            <input type="url" id="ad-link-url" placeholder="https://..."
+                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="ad-is-active" checked> Set as currently active ad
+                        </label>
+                        <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">Publish Ad</button>
+                    </form>
+                </div>
+                <div class="glass-card" style="overflow-x: auto;">
+                    <h3 style="margin-bottom: 1.5rem;">Manage Ads</h3>
+                    <table style="width: 100%; border-collapse: collapse; color: var(--text-muted); font-size: 0.9rem;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                                <th style="padding: 1rem;">Ad Preview</th>
+                                <th style="padding: 1rem;">Redirect Link</th>
+                                <th style="padding: 1rem;">Status</th>
+                                <th style="padding: 1rem;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ads-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== MESSAGES VIEW ===== -->
+            <div id="messages-view" class="admin-view" style="display: none;">
+                <div class="glass-card" style="overflow-x: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3><i class="fa-solid fa-inbox"></i> Contact Messages
+                            <span id="unread-count" style="background: var(--primary); color: white; font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 2rem; margin-left: 0.5rem;">0</span>
+                        </h3>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; min-width: 700px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border); text-align: left;">
+                                    <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">From</th>
+                                    <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Email</th>
+                                    <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Message</th>
+                                    <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Date</th>
+                                    <th style="padding: 1rem; color: var(--text-muted); font-weight: 500;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="messages-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 
-    <!-- Blog Modal -->
-    <div id="blog-modal" class="glass"
-        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
-        <div class="glass-card" style="width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
-            <h2 style="margin-bottom: 1.5rem;">Create New Blog Post</h2>
+    <!-- ==================== BLOG MODAL ==================== -->
+    <div id="blog-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+            <h3 id="blog-modal-title">Create New Blog Post</h3>
             <form id="new-blog-form" style="display: grid; gap: 1rem;">
                 <div>
-                    <label style="display: block; margin-bottom: 0.5rem;">Title</label>
-                    <input type="text" id="blog-title" required
-                        style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                    <label>Title *</label>
+                    <input type="text" id="blog-title" required>
                 </div>
                 <div>
-                    <label style="display: block; margin-bottom: 0.5rem;">Cover Image</label>
+                    <label>Cover Image</label>
                     <div style="display: flex; gap: 0.5rem;">
-                        <input type="url" id="blog-image" placeholder="https://example.com/image.jpg"
-                            style="flex: 1; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
-                        <button type="button" id="upload-blog-image-btn" class="btn btn-outline"
-                            style="padding: 0 1rem;"><i class="fa-solid fa-upload"></i></button>
+                        <input type="url" id="blog-image" placeholder="https://example.com/image.jpg" style="flex: 1;">
+                        <button type="button" id="upload-blog-image-btn" class="btn btn-outline" style="padding: 0 1rem;"><i class="fa-solid fa-upload"></i></button>
                     </div>
                     <input type="file" id="blog-image-file" accept="image/*" style="display: none;">
-                    <small style="color: var(--text-muted); margin-top: 0.25rem; display: block;">Paste a URL or upload
-                        a file.</small>
+                    <small style="color: var(--text-muted); margin-top: 0.25rem; display: block;">Paste a URL or upload a file.</small>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label>Category</label>
+                        <select id="blog-category" style="background: #1e293b;">
+                            <option value="TECHNOLOGY">Technology</option>
+                            <option value="BUSINESS">Business</option>
+                            <option value="DESIGN">Design</option>
+                            <option value="LIFESTYLE">Lifestyle</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Status</label>
+                        <select id="blog-status" style="background: #1e293b;">
+                            <option value="published">Published</option>
+                            <option value="draft">Save as Draft</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
-                    <label style="display: block; margin-bottom: 0.5rem;">Category</label>
-                    <select id="blog-category"
-                        style="width: 100%; padding: 0.75rem; background: #1e293b; border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
-                        <option value="TECHNOLOGY">Technology</option>
-                        <option value="BUSINESS">Business</option>
-                        <option value="DESIGN">Design</option>
-                        <option value="LIFESTYLE">Lifestyle</option>
-                    </select>
+                    <label>Excerpt *</label>
+                    <textarea id="blog-excerpt" required style="height: 70px;"></textarea>
                 </div>
                 <div>
-                    <label style="display: block; margin-bottom: 0.5rem;">Excerpt</label>
-                    <textarea id="blog-excerpt" required
-                        style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white; height: 80px;"></textarea>
-                </div>
-                <div>
-                    <label style="display: block; margin-bottom: 0.5rem;">Attach File (Optional)</label>
-                    <select id="blog-file-attach"
-                        style="width: 100%; padding: 0.75rem; background: #1e293b; border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                    <label>Attach File (Optional)</label>
+                    <select id="blog-file-attach" style="background: #1e293b;">
                         <option value="">No File Attached</option>
                     </select>
                 </div>
                 <div>
-                    <label style="display: block; margin-bottom: 0.5rem;">Full Content</label>
-                    <textarea id="blog-content" required
-                        style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white; height: 150px;"></textarea>
+                    <label>Full Content *</label>
+                    <textarea id="blog-content" required style="height: 150px;"></textarea>
                 </div>
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">Publish
-                        Post</button>
-                    <button type="button" id="close-blog-modal" class="btn btn-outline"
-                        style="flex: 1; justify-content: center;">Cancel</button>
+                <div class="modal-actions" style="margin-top: 0.5rem;">
+                    <button type="submit" class="btn btn-primary">Publish Post</button>
+                    <button type="button" id="close-blog-modal" class="btn btn-outline">Cancel</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- File Upload simulation (hidden) -->
+    <!-- ==================== SUSPEND USER MODAL ==================== -->
+    <div id="suspend-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h3><i class="fa-solid fa-user-lock" style="color: #f87171; margin-right: 0.5rem;"></i>Suspend User</h3>
+            <input type="hidden" id="suspend-user-id">
+            <label>Suspension Duration</label>
+            <select id="suspend-duration">
+                <option value="3">3 Days</option>
+                <option value="7">1 Week</option>
+                <option value="14">2 Weeks</option>
+                <option value="30">1 Month</option>
+                <option value="60">2 Months</option>
+                <option value="90">3 Months</option>
+            </select>
+            <label>Reason (optional)</label>
+            <textarea id="suspend-reason" rows="3" placeholder="Explain why this user is being suspended..."></textarea>
+            <div class="modal-actions">
+                <button id="confirm-suspend-btn" class="btn" style="background: #ef4444; color: white; flex: 1; justify-content: center;">
+                    <i class="fa-solid fa-ban"></i> Suspend
+                </button>
+                <button id="cancel-suspend-btn" class="btn btn-outline" style="flex: 1; justify-content: center;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== WITHDRAW REQUEST MODAL ==================== -->
+    <div id="withdraw-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box" style="max-width: 520px; max-height: 92vh; overflow-y: auto;">
+            <h3><i class="fa-solid fa-arrow-up-from-bracket" style="color: #10b981; margin-right: 0.5rem;"></i>Request Withdrawal</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
+                Upload your payment QR code or a screenshot of your payment details so the admin can transfer funds directly.
+            </p>
+            <form id="withdraw-form">
+                <label>Amount (Rs.) *</label>
+                <input type="number" id="withdraw-amount" required min="10" step="0.01" placeholder="Minimum: Rs. 10.00">
+
+                <label>Payment Method *</label>
+                <select id="withdraw-method" style="background: #1e293b;">
+                    <option value="bank_transfer">🏦 Bank Transfer</option>
+                    <option value="esewa">💚 eSewa</option>
+                    <option value="khalti">💜 Khalti</option>
+                    <option value="ime_pay">🔵 IME Pay</option>
+                    <option value="paypal">🌐 PayPal</option>
+                    <option value="other">📋 Other</option>
+                </select>
+
+                <label>Account / Phone / Email *</label>
+                <textarea id="withdraw-details" rows="2"
+                    placeholder="e.g. Bank: 12345678, Branch: Kathmandu  |  eSewa: 9800000000" required></textarea>
+
+                <!-- QR / Screenshot Upload -->
+                <label style="margin-bottom: 0.3rem;">
+                    Payment QR or Screenshot
+                    <span style="color: var(--text-muted); font-size: 0.75rem;">(recommended)</span>
+                </label>
+                <div id="qr-upload-area" style="
+                    border: 2px dashed rgba(255,255,255,0.15);
+                    border-radius: 0.75rem;
+                    padding: 1.25rem;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: border-color 0.2s;
+                    position: relative;
+                    margin-bottom: 1rem;"
+                    onclick="document.getElementById('qr-file-input').click()"
+                    ondragover="event.preventDefault();this.style.borderColor='var(--primary)';"
+                    ondragleave="this.style.borderColor='rgba(255,255,255,0.15)';"
+                    ondrop="handleQrDrop(event)">
+                    <input type="file" id="qr-file-input" accept="image/*" style="display:none;">
+                    <div id="qr-upload-placeholder">
+                        <i class="fa-solid fa-qrcode" style="font-size: 2.5rem; color: var(--primary); opacity: 0.7; margin-bottom: 0.5rem;"></i>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Click or drag & drop your QR / screenshot here</p>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">PNG, JPG, JPEG — max 5 MB</p>
+                    </div>
+                    <img id="qr-preview" src="" alt="QR Preview"
+                        style="display: none; max-height: 180px; border-radius: 0.5rem; margin: 0 auto; object-fit: contain;">
+                    <button type="button" id="qr-clear-btn"
+                        style="display:none; position:absolute; top:8px; right:8px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 26px; height: 26px; font-size: 0.8rem; cursor: pointer; line-height: 26px; padding: 0;"
+                        onclick="clearQrPreview(event)">✕</button>
+                    <div id="qr-upload-progress" style="display:none; margin-top:0.5rem;">
+                        <div style="height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
+                            <div id="qr-progress-bar" style="height:100%; background:var(--primary); width:0%; transition:width 0.3s;"></div>
+                        </div>
+                        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Uploading...</p>
+                    </div>
+                </div>
+                <input type="hidden" id="withdraw-qr-url">
+
+                <div class="modal-actions" style="margin-top: 0.5rem;">
+                    <button type="submit" id="withdraw-submit-btn" class="btn btn-primary" style="flex: 1; justify-content: center;">
+                        <i class="fa-solid fa-paper-plane"></i> Submit Request
+                    </button>
+                    <button type="button" id="cancel-withdraw-btn" class="btn btn-outline" style="flex: 1; justify-content: center;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- File Upload (hidden) -->
     <input type="file" id="file-input" style="display: none;">
+
+    <!-- Toast notifications -->
+    <div id="toast-container"></div>
 
     <script src="dashboard.js"></script>
 </body>
+
 
 </html>

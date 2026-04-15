@@ -14,14 +14,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let isLogin = true;
 
-    function showError(message) {
+    function showError(message, isSuccess = false) {
         if (!authError || !errorText) return;
         errorText.innerText = message;
         authError.style.display = 'block';
-        // Shake animation for attention
-        authError.style.animation = 'none';
-        authError.offsetHeight; /* trigger reflow */
-        authError.style.animation = 'shake 0.4s ease-in-out';
+        authError.style.background = isSuccess ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+        authError.style.borderColor = isSuccess ? '#10b981' : '#ef4444';
+        errorText.style.color = isSuccess ? '#34d399' : '#f87171';
+        if (!isSuccess) {
+            authError.style.animation = 'none';
+            authError.offsetHeight;
+            authError.style.animation = 'shake 0.4s ease-in-out';
+        }
     }
 
     function clearError() {
@@ -40,11 +44,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Forgot Password
+    const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+    if (forgotPasswordBtn) {
+        forgotPasswordBtn.addEventListener('click', async () => {
+            const email = document.getElementById('email').value.trim();
+            if (!email) {
+                showError('Please enter your email address first, then click Forgot Password.');
+                return;
+            }
+            forgotPasswordBtn.disabled = true;
+            forgotPasswordBtn.innerText = 'Sending...';
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/auth.html'
+            });
+            forgotPasswordBtn.disabled = false;
+            forgotPasswordBtn.innerText = 'Forgot Password?';
+            if (error) {
+                showError(error.message);
+            } else {
+                showError('Password reset link sent! Check your email.', true);
+            }
+        });
+    }
+
     // Toggle between Login and Sign Up
     authSwitchBtn.addEventListener('click', () => {
         isLogin = !isLogin;
         clearError();
-        authForm.reset(); // Clear all fields when switching
+        authForm.reset();
         authTitle.innerText = isLogin ? 'Sign in to your account' : 'Create a new account';
         submitBtn.innerText = isLogin ? 'Sign In' : 'Sign Up';
         authSwitchText.innerText = isLogin ? "Don't have an account?" : "Already have an account?";
@@ -69,7 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
                 if (error) {
-                    console.error('Login error:', error);
                     let msg = error.message;
                     if (msg.includes('Invalid login credentials')) {
                         msg = "Account not found or password incorrect. Please try again.";
@@ -78,10 +105,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     showError(msg);
                 } else {
+                    // ✅ Check for suspension
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('suspended_until, suspension_reason, role')
+                        .eq('id', data.user.id)
+                        .single();
+
+                    if (profile && profile.suspended_until) {
+                        const suspUntil = new Date(profile.suspended_until);
+                        const now = new Date();
+
+                        if (suspUntil > now && profile.role !== 'superadmin') {
+                            // User is still suspended — sign them out immediately
+                            await supabase.auth.signOut();
+                            const formattedDate = suspUntil.toLocaleDateString('en-US', {
+                                year: 'numeric', month: 'long', day: 'numeric'
+                            });
+                            showError(
+                                `⚠️ Your account is suspended until ${formattedDate}. ` +
+                                (profile.suspension_reason ? `Reason: "${profile.suspension_reason}".` : '') +
+                                ' Please contact support for assistance.'
+                            );
+                            submitBtn.disabled = false;
+                            submitBtn.innerText = originalBtnText;
+                            return;
+                        }
+                    }
+
                     window.location.href = 'dashboard.html';
                 }
             } catch (err) {
-                showError('An unexpected network error occurred. Please check your connection.');
+                console.error("Login Exception:", err);
+                showError('Login failed: ' + (err.message || 'Network error'));
             }
         } else {
             try {
@@ -99,7 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (error) {
-                    console.error('Signup error:', error);
                     let msg = error.message;
                     if (msg.includes('already registered') || error.status === 422) {
                         msg = 'This email is already registered. Try logging in instead.';
@@ -108,11 +163,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     showError(msg);
                 } else {
-                    alert('Success! Please check your email for a verification link to complete your registration.');
-                    authSwitchBtn.click();
+                    showError('Success! Check your email for a verification link to complete registration.', true);
+                    setTimeout(() => authSwitchBtn.click(), 2000);
                 }
             } catch (err) {
-                showError('An unexpected error occurred during registration.');
+                console.error("Signup Exception:", err);
+                showError('Registration failed: ' + (err.message || 'Unexpected error'));
             }
         }
 
