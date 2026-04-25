@@ -781,16 +781,20 @@ canvas {
 
 .blog-main-content img, 
 #blog-content-area img,
+#related-posts-container img,
 .admin-view table img,
 #file-list img {
     cursor: zoom-in !important;
-    transition: opacity 0.2s ease;
+    transition: transform 0.2s ease, opacity 0.2s ease;
 }
+
 .blog-main-content img:hover, 
 #blog-content-area img:hover,
+#related-posts-container img:hover,
 .admin-view table img:hover,
 #file-list img:hover {
-    opacity: 0.9;
+    opacity: 0.95;
+    transform: scale(1.02);
 }
 .lightbox-close:hover {
     color: var(--primary);
@@ -841,4 +845,4 @@ canvas {
         display: none; /* Hide floating sidebar on smaller screens */
     }
 }
-
+
