@@ -1646,8 +1646,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lightboxImg) {
             lightboxImg.addEventListener('click', (e) => {
                 e.stopPropagation();
-                lightboxImg.classList.toggle('zoomed');
+                const isZoomed = lightboxImg.classList.toggle('zoomed');
+                if (!isZoomed) {
+                    lightboxImg.style.transformOrigin = 'center';
+                }
             });
+
+            // Panning logic: Follow mouse movement when zoomed
+            lightbox.addEventListener('mousemove', (e) => {
+                if (!lightboxImg.classList.contains('zoomed')) return;
+                
+                const { left, top, width, height } = lightbox.getBoundingClientRect();
+                const x = ((e.clientX - left) / width) * 100;
+                const y = ((e.clientY - top) / height) * 100;
+                
+                lightboxImg.style.transformOrigin = `${x}% ${y}%`;
+            });
+
+            // Touch support
+            lightbox.addEventListener('touchmove', (e) => {
+                if (!lightboxImg.classList.contains('zoomed')) return;
+                const touch = e.touches[0];
+                const { left, top, width, height } = lightbox.getBoundingClientRect();
+                const x = ((touch.clientX - left) / width) * 100;
+                const y = ((touch.clientY - top) / height) * 100;
+                
+                lightboxImg.style.transformOrigin = `${x}% ${y}%`;
+            }, { passive: true });
         }
         
         document.addEventListener('keydown', (e) => {
