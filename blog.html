@@ -100,8 +100,12 @@
                 lb.id = 'lightbox';
                 lb.className = 'lightbox';
                 lb.innerHTML = `
-                    <span class="lightbox-close">&times;</span>
-                    <img class="lightbox-content" id="lightbox-img">
+                    <span class="lightbox-close" aria-label="Close lightbox">&times;</span>
+                    <img class="lightbox-content" id="lightbox-img" alt="Enlarged view">
+                    <div class="zoom-hint" id="zoom-hint">
+                        <i class="fa-solid fa-arrows-up-down-left-right"></i>
+                        Move to pan
+                    </div>
                 `;
                 document.body.appendChild(lb);
             }
@@ -129,8 +133,33 @@
             if (lightboxImg) {
                 lightboxImg.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    lightboxImg.classList.toggle('zoomed');
+                    const isZoomed = lightboxImg.classList.toggle('zoomed');
+                    if (!isZoomed) {
+                        lightboxImg.style.transformOrigin = 'center';
+                    }
                 });
+
+                // Panning logic: Follow mouse movement when zoomed
+                lightbox.addEventListener('mousemove', (e) => {
+                    if (!lightboxImg.classList.contains('zoomed')) return;
+                    
+                    const { left, top, width, height } = lightbox.getBoundingClientRect();
+                    const x = ((e.clientX - left) / width) * 100;
+                    const y = ((e.clientY - top) / height) * 100;
+                    
+                    lightboxImg.style.transformOrigin = `${x}% ${y}%`;
+                });
+
+                // Touch support for panning
+                lightbox.addEventListener('touchmove', (e) => {
+                    if (!lightboxImg.classList.contains('zoomed')) return;
+                    const touch = e.touches[0];
+                    const { left, top, width, height } = lightbox.getBoundingClientRect();
+                    const x = ((touch.clientX - left) / width) * 100;
+                    const y = ((touch.clientY - top) / height) * 100;
+                    
+                    lightboxImg.style.transformOrigin = `${x}% ${y}%`;
+                }, { passive: true });
             }
             
             document.addEventListener('keydown', (e) => {
@@ -152,6 +181,16 @@
                         lightbox.classList.add('active');
                         lightboxImg.src = e.target.src;
                         document.body.style.overflow = 'hidden';
+
+                        // Show hint if it's the first time
+                        const hint = document.getElementById('zoom-hint');
+                        if (hint && !localStorage.getItem('zoom_hint_shown')) {
+                            hint.classList.add('visible');
+                            setTimeout(() => {
+                                hint.classList.remove('visible');
+                                localStorage.setItem('zoom_hint_shown', 'true');
+                            }, 3000);
+                        }
                     }
                 }
             });
@@ -177,7 +216,17 @@
             const { data: blog, error } = await supabase.from('blogs').select('*').eq('id', blogId).single();
 
             if (error || !blog) {
-                container.innerHTML = '<h1>Article not found.</h1><a href="index.html" class="btn btn-primary" style="margin-top: 2rem;">Back to Home</a>';
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 5rem 2rem;">
+                        <i class="fa-solid fa-circle-exclamation" style="font-size: 4rem; color: #ef4444; margin-bottom: 2rem;"></i>
+                        <h1 style="margin-bottom: 1rem;">Article not found</h1>
+                        <p style="color: var(--text-muted); margin-bottom: 2rem;">The article you're looking for might have been moved or deleted.</p>
+                        <div style="display: flex; gap: 1rem; justify-content: center;">
+                            <button onclick="window.location.reload()" class="btn-retry"><i class="fa-solid fa-rotate-right"></i> Retry</button>
+                            <a href="index.html" class="btn btn-primary">Back to Home</a>
+                        </div>
+                    </div>
+                `;
                 return;
             }
 
@@ -204,17 +253,17 @@
                         </div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="shareOn('facebook')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on Facebook"><i class="fa-brands fa-facebook-f"></i></button>
-                        <button onclick="shareOn('twitter')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on Twitter"><i class="fa-brands fa-x-twitter"></i></button>
-                        <button onclick="shareOn('linkedin')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in"></i></button>
-                        <button onclick="shareOn('whatsapp')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
-                        <button onclick="shareOn('instagram')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on Instagram"><i class="fa-brands fa-instagram"></i></button>
-                        <button onclick="copyShareLink()" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Copy Link"><i class="fa-solid fa-link"></i></button>
+                        <button onclick="shareOn('facebook')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on Facebook" aria-label="Share on Facebook"><i class="fa-brands fa-facebook-f"></i></button>
+                        <button onclick="shareOn('twitter')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on Twitter" aria-label="Share on Twitter"><i class="fa-brands fa-x-twitter"></i></button>
+                        <button onclick="shareOn('linkedin')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on LinkedIn" aria-label="Share on LinkedIn"><i class="fa-brands fa-linkedin-in"></i></button>
+                        <button onclick="shareOn('whatsapp')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on WhatsApp" aria-label="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
+                        <button onclick="shareOn('instagram')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on Instagram" aria-label="Share on Instagram"><i class="fa-brands fa-instagram"></i></button>
+                        <button onclick="copyShareLink()" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Copy Link" aria-label="Copy shareable link"><i class="fa-solid fa-link"></i></button>
                     </div>
                 </div>
                 ${blog.image_url ? `
-                    <div style="width: 100%; border-radius: 1rem; margin-bottom: 3rem; overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center; min-height: 300px;">
-                        <img src="${blog.image_url}" style="max-width: 100%; height: auto; max-height: 500px; object-fit: contain; display: block; margin: 0 auto; border-radius: 0.5rem;" alt="${blog.title}">
+                    <div style="width: 100%; border-radius: 1rem; margin-bottom: 3rem; overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center; min-height: 300px;" class="img-container">
+                        <img src="${blog.image_url}" class="img-loading" style="max-width: 100%; height: auto; max-height: 500px; object-fit: contain; display: block; margin: 0 auto; border-radius: 0.5rem;" alt="${blog.title}" onload="this.classList.add('img-loaded');">
                     </div>
                 ` : `
                     <div style="height: 400px; background: #334155; border-radius: 1rem; margin-bottom: 3rem; display: flex; align-items: center; justify-content: center;">
