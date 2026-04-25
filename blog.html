@@ -3,7 +3,6 @@
 
 <head>
     <meta charset="UTF-8">
-      <meta name="google-adsense-account" content="ca-pub-1931185774726426">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexGen | Read Article</title>
     <link rel="stylesheet" href="style.css">
@@ -142,8 +141,8 @@
             document.addEventListener('click', (e) => {
                 // If it's an image and not already inside the lightbox
                 if (e.target.tagName === 'IMG' && !e.target.closest('.lightbox-content')) {
-                    const isZoomable = e.target.closest('.blog-main-content') || 
-                                     e.target.closest('#blog-content-area');
+                    const isZoomable = !e.target.closest('.navbar-main') && 
+                                     !e.target.closest('.share-sidebar');
 
                     if (isZoomable) {
                         e.preventDefault();
