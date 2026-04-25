@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexGen | Read Article</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
 </head>
@@ -33,8 +33,8 @@
                 </div>
             </div>
 
-            <!-- AdSense Placeholder inside blog -->
-            <div class="glass-card"
+            <!-- Advertisement Section -->
+            <div id="blog-ad-container" class="glass-card"
                 style="margin: 4rem 0; text-align: center; padding: 2rem; border-style: dashed; border-color: var(--secondary);">
                 <p style="color: var(--text-muted);">IN-ARTICLE ADVERTISEMENT</p>
                 <small>Placeholder for Google AdSense</small>
@@ -97,12 +97,13 @@
                         <button onclick="shareOn('twitter')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on Twitter"><i class="fa-brands fa-x-twitter"></i></button>
                         <button onclick="shareOn('linkedin')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in"></i></button>
                         <button onclick="shareOn('whatsapp')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
+                        <button onclick="shareOn('instagram')" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Share on Instagram"><i class="fa-brands fa-instagram"></i></button>
                         <button onclick="copyShareLink()" class="btn btn-outline" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;" title="Copy Link"><i class="fa-solid fa-link"></i></button>
                     </div>
                 </div>
                 ${blog.image_url ? `
-                    <div style="width: 100%; border-radius: 1rem; margin-bottom: 3rem; overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center;">
-                        <img src="${blog.image_url}" style="width: 100%; height: auto; max-height: 600px; object-fit: contain; display: block;">
+                    <div style="width: 100%; border-radius: 1rem; margin-bottom: 3rem; overflow: hidden; background: #1e293b; display: flex; align-items: center; justify-content: center; min-height: 300px;">
+                        <img src="${blog.image_url}" style="max-width: 100%; height: auto; max-height: 500px; object-fit: contain; display: block; margin: 0 auto; border-radius: 0.5rem;" alt="${blog.title}">
                     </div>
                 ` : `
                     <div style="height: 400px; background: #334155; border-radius: 1rem; margin-bottom: 3rem; display: flex; align-items: center; justify-content: center;">
@@ -179,6 +180,9 @@
             // Load reactions and comments
             await loadReactions(blogId);
             await loadComments(blogId);
+
+            // Load targeted advertisement
+            await renderBlogAd(blogId);
 
             // Adjust nav button if logged in
             const { data: { session } } = await supabase.auth.getSession();
@@ -360,12 +364,51 @@
                 case 'twitter': shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${title}`; break;
                 case 'linkedin': shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`; break;
                 case 'whatsapp': shareUrl = `https://api.whatsapp.com/send?text=${title} ${url}`; break;
+                case 'instagram': 
+                    copyShareLink();
+                    alert('Instagram sharing: Link copied to clipboard! You can now paste it in your Instagram story or message.');
+                    return;
             }
             
             if (shareUrl) {
                 window.open(shareUrl, '_blank', 'width=600,height=400');
             }
         };
+
+        // Render Targeted Ad for Blog
+        async function renderBlogAd(blogId) {
+            const adContainer = document.getElementById('blog-ad-container');
+            if (!adContainer) return;
+
+            // 1. Try to find ad specifically for THIS blog
+            let { data: ads, error } = await supabase
+                .from('site_ads')
+                .select('*')
+                .eq('is_active', true)
+                .eq('placement', 'specific_blog')
+                .eq('target_blog_id', blogId)
+                .limit(1);
+
+            // 2. Fallback to All Blogs placement
+            if ((!ads || ads.length === 0) && !error) {
+                const result = await supabase
+                    .from('site_ads')
+                    .select('*')
+                    .eq('is_active', true)
+                    .eq('placement', 'all_blogs')
+                    .limit(1);
+                ads = result.data;
+                error = result.error;
+            }
+
+            if (!error && ads && ads.length > 0) {
+                const ad = ads[0];
+                adContainer.style.cssText = 'margin: 4rem 0; padding: 0; background: transparent; border: none;';
+                let adHtml = `<img src="${ad.image_url}" style="max-width: 100%; height: auto; border-radius: 0.5rem; display: block; margin: 0 auto; object-fit: contain;" alt="Advertisement">`;
+                if (ad.link_url) adHtml = `<a href="${ad.link_url}" target="_blank" rel="noopener" style="display: block;">${adHtml}</a>`;
+                adContainer.innerHTML = adHtml;
+            }
+        }
     </script>
 </body>
 

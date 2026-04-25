@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexGen | Workspace Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="supabase.js"></script>
@@ -85,6 +85,33 @@
 
         /* Sidebar role badge */
         #role-badge { font-size: 0.7rem; padding: 0.2rem 0.75rem; border-radius: 2rem; margin-top: 0.5rem; display: inline-block; }
+
+        /* Premium Select Styling */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.5)'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1rem;
+            padding-right: 2.5rem !important;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        select:hover {
+            border-color: rgba(255,255,255,0.2) !important;
+            background-color: rgba(255,255,255,0.08) !important;
+        }
+        select:focus {
+            outline: none;
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            background-color: rgba(255,255,255,0.1) !important;
+        }
+        select option {
+            background: #1e293b;
+            color: white;
+            padding: 0.5rem;
+        }
     </style>
 </head>
 
@@ -466,8 +493,24 @@
                             <input type="url" id="ad-link-url" placeholder="https://..."
                                 style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
                         </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem;">Ad Placement</label>
+                                <select id="ad-placement" style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white; cursor: pointer;">
+                                    <option value="home">Home Page</option>
+                                    <option value="all_blogs">All Blog Pages</option>
+                                    <option value="specific_blog">Specific Blog</option>
+                                </select>
+                            </div>
+                            <div id="ad-target-blog-container" style="display: none;">
+                                <label style="display: block; margin-bottom: 0.5rem;">Target Blog</label>
+                                <select id="ad-target-blog" style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                                    <option value="">Select a blog...</option>
+                                </select>
+                            </div>
+                        </div>
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input type="checkbox" id="ad-is-active" checked> Set as currently active ad
+                            <input type="checkbox" id="ad-is-active" checked> Set as currently active ad for this placement
                         </label>
                         <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">Publish Ad</button>
                     </form>
@@ -478,6 +521,7 @@
                         <thead>
                             <tr style="text-align: left; border-bottom: 1px solid var(--border);">
                                 <th style="padding: 1rem;">Ad Preview</th>
+                                <th style="padding: 1rem;">Placement</th>
                                 <th style="padding: 1rem;">Redirect Link</th>
                                 <th style="padding: 1rem;">Status</th>
                                 <th style="padding: 1rem;">Actions</th>

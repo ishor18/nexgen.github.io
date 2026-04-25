@@ -1228,24 +1228,45 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderAds() {
         if (!isSuperAdmin) return;
         const tbody = document.getElementById('ads-table');
-        const { data: ads } = await supabase.from('site_ads').select('*').order('created_at', { ascending: false });
+        const { data: ads } = await supabase.from('site_ads').select('*, blogs(title)').order('created_at', { ascending: false });
 
         if (!tbody) return;
+
+        // Populate targeted blog dropdown if it exists
+        const adTargetDropdown = document.getElementById('ad-target-blog');
+        if (adTargetDropdown && adTargetDropdown.options.length <= 1) {
+            const { data: blogs } = await supabase.from('blogs').select('id, title').order('created_at', { ascending: false });
+            if (blogs) {
+                blogs.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.title;
+                    adTargetDropdown.appendChild(opt);
+                });
+            }
+        }
+
         if (!ads || ads.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-muted);">No ads uploaded yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="padding: 2rem; text-align: center; color: var(--text-muted);">No ads uploaded yet.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = ads.map(ad => `
+        tbody.innerHTML = ads.map(ad => {
+            let placementTxt = 'Home Page';
+            if (ad.placement === 'all_blogs') placementTxt = 'All Blogs';
+            if (ad.placement === 'specific_blog') placementTxt = `Blog: ${ad.blogs?.title || 'Unknown'}`;
+
+            return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <td style="padding: 1rem;"><img src="${ad.image_url}" alt="Ad" style="max-height: 50px; border-radius: 4px;"></td>
+                <td style="padding: 1rem; font-size: 0.8rem; color: white;">${placementTxt}</td>
                 <td style="padding: 1rem;"><a href="${ad.link_url || '#'}" target="_blank" style="color: var(--primary);">${ad.link_url ? 'View Link' : 'None'}</a></td>
                 <td style="padding: 1rem;">
                     <span class="badge ${ad.is_active ? 'badge-active' : 'badge-rejected'}">${ad.is_active ? 'Active' : 'Inactive'}</span>
                 </td>
                 <td style="padding: 1rem;">
                     <div style="display: flex; gap: 6px;">
-                        <button class="icon-btn" onclick="toggleAdStatus(${ad.id}, ${ad.is_active})" style="color: ${ad.is_active ? '#f59e0b' : '#10b981'};" title="${ad.is_active ? 'Deactivate' : 'Activate'}">
+                        <button class="icon-btn" onclick="toggleAdStatus(${ad.id}, ${ad.is_active}, '${ad.placement}', ${ad.target_blog_id})" style="color: ${ad.is_active ? '#f59e0b' : '#10b981'};" title="${ad.is_active ? 'Deactivate' : 'Activate'}">
                             <i class="fa-solid ${ad.is_active ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
                         </button>
                         <button class="icon-btn" onclick="deleteAd(${ad.id})" style="color: #f87171;" title="Delete">
@@ -1253,7 +1274,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         </button>
                     </div>
                 </td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
+    }
+
+    // Ad targeting logic
+    const placementSelector = document.getElementById('ad-placement');
+    const targetBlogContainer = document.getElementById('ad-target-blog-container');
+    if (placementSelector && targetBlogContainer) {
+        placementSelector.addEventListener('change', () => {
+            targetBlogContainer.style.display = (placementSelector.value === 'specific_blog') ? 'block' : 'none';
+        });
     }
 
     const adImageFile    = document.getElementById('ad-image-file');
@@ -1283,16 +1314,39 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const imageUrl = document.getElementById('ad-image-url').value;
             const linkUrl  = document.getElementById('ad-link-url').value;
+            const placement = document.getElementById('ad-placement').value;
+            const targetBlogId = document.getElementById('ad-target-blog').value || null;
             const isActive = document.getElementById('ad-is-active').checked;
-            if (isActive) await supabase.from('site_ads').update({ is_active: false }).neq('id', 0);
-            const { error } = await supabase.from('site_ads').insert([{ image_url: imageUrl, link_url: linkUrl || null, is_active: isActive }]);
+
+            if (isActive) {
+                // Deactivate other ads for the same exact target
+                let query = supabase.from('site_ads').update({ is_active: false }).eq('placement', placement);
+                if (targetBlogId) query = query.eq('target_blog_id', targetBlogId);
+                else query = query.is('target_blog_id', null);
+                await query;
+            }
+
+            const { error } = await supabase.from('site_ads').insert([{
+                image_url: imageUrl,
+                link_url: linkUrl || null,
+                placement,
+                target_blog_id: targetBlogId,
+                is_active: isActive
+            }]);
+
             if (error) alert(error.message);
-            else { showToastMsg('Ad published!', 'success'); newAdForm.reset(); renderAds(); }
+            else { showToastMsg('Ad published!', 'success'); newAdForm.reset(); if (targetBlogContainer) targetBlogContainer.style.display = 'none'; renderAds(); }
         });
     }
 
-    window.toggleAdStatus = async (id, current) => {
-        if (!current) await supabase.from('site_ads').update({ is_active: false }).neq('id', 0);
+    window.toggleAdStatus = async (id, current, placement, targetId) => {
+        if (!current) {
+            // Deactivate other ads for this placement
+            let query = supabase.from('site_ads').update({ is_active: false }).eq('placement', placement);
+            if (targetId) query = query.eq('target_blog_id', targetId);
+            else query = query.is('target_blog_id', null);
+            await query;
+        }
         const { error } = await supabase.from('site_ads').update({ is_active: !current }).eq('id', id);
         if (error) alert(error.message); else renderAds();
     };

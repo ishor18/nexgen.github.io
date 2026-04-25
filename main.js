@@ -83,8 +83,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const adContainer = document.getElementById('global-ad-container');
         if (!adContainer) return;
 
+        // On Home page, fetch ad with placement = 'home'
         const { data: ads, error } = await supabase
-            .from('site_ads').select('*').eq('is_active', true).limit(1);
+            .from('site_ads')
+            .select('*')
+            .eq('is_active', true)
+            .eq('placement', 'home')
+            .limit(1);
 
         if (!error && ads && ads.length > 0) {
             const ad = ads[0];
@@ -92,8 +97,14 @@ document.addEventListener('DOMContentLoaded', () => {
             let adHtml = `<img src="${ad.image_url}" style="max-width: 100%; height: auto; border-radius: 0.5rem; display: block; margin: 0 auto; object-fit: contain;" alt="Advertisement">`;
             if (ad.link_url) adHtml = `<a href="${ad.link_url}" target="_blank" rel="noopener" style="display: block;">${adHtml}</a>`;
             adContainer.innerHTML = adHtml;
+        } else {
+            // No home ad found
+            adContainer.innerHTML = `<p style="color: var(--text-muted);">ADVERTISEMENT SPACE</p><small>Placeholder for Google AdSense</small>`;
+            adContainer.style.cssText = ''; 
         }
-        supabase.channel('active-ad')
+
+        // Real-time updates for ad changes
+        supabase.channel('active-ad-home')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'site_ads' }, () => renderAd())
             .subscribe();
     }
@@ -261,8 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                          <i class="fa-solid fa-fire"></i> Hot</div>` : ''}
 
                     ${blog.image_url
-                        ? `<div style="width:100%;height:200px;border-radius:0.5rem;overflow:hidden;background:#1e293b;">
-                               <img src="${blog.image_url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" alt="${blog.title}">
+                        ? `<div style="width:100%;height:200px;border-radius:0.5rem;overflow:hidden;background:#1e293b;display:flex;align-items:center;justify-content:center;">
+                               <img src="${blog.image_url}" style="max-width:100%;max-height:100%;object-fit:contain;" loading="lazy" alt="${blog.title}">
                            </div>`
                         : `<div style="width:100%;height:200px;background:linear-gradient(135deg,#1e293b,#334155);
                                        border-radius:0.5rem;display:flex;align-items:center;justify-content:center;">
