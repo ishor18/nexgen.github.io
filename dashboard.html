@@ -496,13 +496,21 @@
                             <input type="text" id="profile-name" required
                                 style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
                         </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Avatar URL</label>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <input type="text" id="profile-avatar-url" placeholder="https://..."
-                                    style="flex-grow: 1; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
-                                <button type="button" id="upload-avatar-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;"><i class="fa-solid fa-upload"></i></button>
+                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                            <div style="position: relative; width: 80px; height: 80px; flex-shrink: 0;">
+                                <img id="profile-avatar-preview" src="https://ui-avatars.com/api/?name=User&background=random" 
+                                    style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); background: #1e293b;">
+                                <button type="button" onclick="document.getElementById('avatar-file-input').click()" 
+                                    style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 2px solid #0f172a; cursor: pointer;">
+                                    <i class="fa-solid fa-camera"></i>
+                                </button>
                                 <input type="file" id="avatar-file-input" style="display: none;" accept="image/*">
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Avatar URL (or upload below)</label>
+                                <input type="text" id="profile-avatar-url" placeholder="https://..."
+                                    style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                                <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.4rem;">Click the camera icon to upload a photo.</p>
                             </div>
                         </div>
                         <div>
@@ -521,11 +529,17 @@
                     <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-rectangle-ad"></i> Create New Ad</h3>
                     <form id="new-ad-form" style="display: grid; gap: 1rem;">
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem;">Ad Image</label>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <input type="url" id="ad-image-url" placeholder="Paste image URL here..." required
-                                    style="flex: 1; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
-                                <button type="button" id="upload-ad-image-btn" class="btn btn-outline" style="padding: 0 1rem;"><i class="fa-solid fa-upload"></i></button>
+                            <label style="display: block; margin-bottom: 0.5rem;">Ad Image (URL or upload)</label>
+                            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                                <div id="ad-image-preview-container" style="width: 100px; height: 60px; background: rgba(255,255,255,0.02); border: 1px dashed var(--border); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                                    <i id="ad-preview-icon" class="fa-solid fa-image" style="font-size: 1.5rem; color: var(--text-muted);"></i>
+                                    <img id="ad-image-preview" style="display: none; width: 100%; height: 100%; object-fit: contain;">
+                                </div>
+                                <div style="flex-grow: 1; display: flex; gap: 0.5rem;">
+                                    <input type="url" id="ad-image-url" placeholder="Paste image URL here..." required
+                                        style="flex: 1; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                                    <button type="button" id="upload-ad-image-btn" class="btn btn-outline" style="padding: 0 1.25rem;"><i class="fa-solid fa-upload"></i></button>
+                                </div>
                             </div>
                             <input type="file" id="ad-image-file" accept="image/*" style="display: none;">
                         </div>

@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         await updateAllViews();
         setupRealtime();
+        await setupReferral();
     }
     checkAuth();
 
@@ -334,7 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
             reading_time: readingTime,
             date:      new Date().toLocaleDateString(),
             author_id: currentUser.id,
-            author_name: currentProfile?.full_name || currentUser.email
+            author_name: currentProfile?.full_name || currentUser.email,
+            author_avatar_url: currentProfile?.avatar_url || null
         };
 
         const result = editId
@@ -460,14 +462,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const isImage = t => t && t.includes('image');
         fileList.innerHTML = files.map(file => `
             <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 0.5rem; position: relative;">
-                <button onclick="deleteFile(${file.id})" style="position: absolute; top: 5px; right: 5px; color: #f87171; background: none; border: none; cursor: pointer; font-size: 0.85rem;">
+                <button onclick="deleteFile(${file.id})" style="position: absolute; top: 5px; right: 5px; color: #f87171; background: none; border: none; cursor: pointer; font-size: 0.85rem; z-index: 5;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
-                <a href="${file.url}" target="_blank" style="text-decoration: none;">
-                    <i class="fa-solid ${isImage(file.type) ? 'fa-file-image' : 'fa-file-pdf'}" style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; display: block;"></i>
+                <div style="cursor: pointer;" onclick="openLightbox('${file.url}')">
+                    ${isImage(file.type) 
+                        ? `<img src="${file.url}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 0.25rem; margin-bottom: 0.5rem; background: #0f172a;">`
+                        : `<i class="fa-solid fa-file-pdf" style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; display: block;"></i>`
+                    }
                     <p style="font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: white;">${file.name}</p>
-                </a>
+                </div>
                 <span style="font-size: 0.7rem; color: var(--text-muted);">${file.size}</span>
+                <a href="${file.url}" target="_blank" style="font-size: 0.7rem; color: var(--primary); display: block; margin-top: 0.25rem;">Download</a>
             </div>`).join('');
     }
 
@@ -509,7 +515,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setText(id, val) {
         const el = document.getElementById(id);
-        if (el) el.innerText = val;
+        if (el) {
+            el.innerText = val;
+            el.classList.remove('count-up');
+            void el.offsetWidth; // Trigger reflow
+            el.classList.add('count-up');
+        }
     }
 
     // ============================================================
@@ -1323,6 +1334,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const adImageFile    = document.getElementById('ad-image-file');
     const adImageUrl     = document.getElementById('ad-image-url');
     const uploadAdBtn    = document.getElementById('upload-ad-image-btn');
+    const adPreview      = document.getElementById('ad-image-preview');
+    const adPreviewIcon  = document.getElementById('ad-preview-icon');
+
+    if (adImageUrl) {
+        adImageUrl.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val) {
+                adPreview.src = val;
+                adPreview.style.display = 'block';
+                adPreviewIcon.style.display = 'none';
+            } else {
+                adPreview.style.display = 'none';
+                adPreviewIcon.style.display = 'block';
+            }
+        });
+    }
+
     if (uploadAdBtn && adImageFile) {
         uploadAdBtn.addEventListener('click', () => adImageFile.click());
         adImageFile.addEventListener('change', async (e) => {
@@ -1338,6 +1366,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (se) { alert(se.message); return; }
             const { data: { publicUrl } } = supabase.storage.from('nexgen-uploads').getPublicUrl(`ads/${fn}`);
             adImageUrl.value = publicUrl;
+            
+            // Show preview
+            adPreview.src = publicUrl;
+            adPreview.style.display = 'block';
+            adPreviewIcon.style.display = 'none';
         });
     }
 
@@ -1475,6 +1508,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('profile-name').value = currentProfile.full_name || '';
         document.getElementById('profile-avatar-url').value = currentProfile.avatar_url || '';
         document.getElementById('profile-bio').value = currentProfile.bio || '';
+        if (currentProfile.avatar_url) {
+            document.getElementById('profile-avatar-preview').src = currentProfile.avatar_url;
+        }
+
+        // Live Preview on URL change
+        document.getElementById('profile-avatar-url').addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val) document.getElementById('profile-avatar-preview').src = val;
+        });
 
         profileForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1494,35 +1536,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Avatar Upload
-    const uploadAvatarBtn = document.getElementById('upload-avatar-btn');
     const avatarFileInput = document.getElementById('avatar-file-input');
-    if (uploadAvatarBtn && avatarFileInput) {
-        uploadAvatarBtn.addEventListener('click', () => avatarFileInput.click());
+    if (avatarFileInput) {
         avatarFileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
             const ext = file.name.split('.').pop();
             const fn = `avatar_${currentUser.id}_${Date.now()}.${ext}`;
-            uploadAvatarBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            
+            // Show loading on preview
+            const preview = document.getElementById('profile-avatar-preview');
+            const originalSrc = preview.src;
+            preview.style.opacity = '0.5';
+
             const { error: se } = await supabase.storage.from('nexgen-uploads').upload(`avatars/${fn}`, file, { upsert: true });
-            uploadAvatarBtn.innerHTML = '<i class="fa-solid fa-upload"></i>';
+            preview.style.opacity = '1';
+
             if (se) { alert(se.message); return; }
             const { data: { publicUrl } } = supabase.storage.from('nexgen-uploads').getPublicUrl(`avatars/${fn}`);
             document.getElementById('profile-avatar-url').value = publicUrl;
+            preview.src = publicUrl;
         });
     }
 
     // ============================================================
     // REFERRAL LOGIC
     // ============================================================
-    function setupReferral() {
+    async function setupReferral() {
         const refLinkVal = document.getElementById('referral-link-val');
-        if (refLinkVal && currentProfile.referral_code) {
+        if (!refLinkVal) return;
+
+        // If code is missing, try to generate one (for legacy users)
+        if (!currentProfile.referral_code && currentUser) {
+            const newCode = 'NG-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+            const { error } = await supabase.from('profiles').update({ referral_code: newCode }).eq('id', currentUser.id);
+            if (!error) currentProfile.referral_code = newCode;
+        }
+
+        if (currentProfile.referral_code) {
             const baseUrl = window.location.origin + window.location.pathname.replace('dashboard.html', 'auth.html');
             refLinkVal.innerText = `${baseUrl}?ref=${currentProfile.referral_code}`;
+        } else {
+            refLinkVal.innerText = "Error loading code";
         }
     }
-    setupReferral();
 
     window.copyReferralLink = function() {
         const text = document.getElementById('referral-link-val').innerText;
@@ -1547,5 +1604,71 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(toast);
         setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3500);
     }
+
+    // ============================================================
+    // LIGHTBOX LOGIC
+    // ============================================================
+    function initLightbox() {
+        if (window.dashboardLightboxInited) return;
+        window.dashboardLightboxInited = true;
+
+        if (!document.getElementById('lightbox')) {
+            const lb = document.createElement('div');
+            lb.id = 'lightbox';
+            lb.className = 'lightbox';
+            lb.innerHTML = `
+                <span class="lightbox-close">&times;</span>
+                <img class="lightbox-content" id="lightbox-img">
+            `;
+            document.body.appendChild(lb);
+
+            const closeLB = () => {
+                lb.classList.remove('active');
+                setTimeout(() => { 
+                    lb.style.display = 'none';
+                    document.getElementById('lightbox-img').classList.remove('zoomed');
+                }, 200);
+                document.body.style.overflow = 'auto';
+            };
+
+            lb.onclick = (e) => {
+                if (e.target.id === 'lightbox' || e.target.className === 'lightbox-close') {
+                    closeLB();
+                }
+            };
+
+            const lbImg = document.getElementById('lightbox-img');
+            lbImg.onclick = (e) => {
+                e.stopPropagation();
+                lbImg.classList.toggle('zoomed');
+            };
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && lb.classList.contains('active')) closeLB();
+            });
+        }
+    }
+    initLightbox();
+
+    window.openLightbox = function(url) {
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        if (lightbox && lightboxImg) {
+            lightbox.style.display = 'flex';
+            lightbox.offsetHeight;
+            lightbox.classList.add('active');
+            lightboxImg.src = url;
+            document.body.style.overflow = 'hidden';
+        }
+    };
+
+    // Auto-init for images in tables
+    document.addEventListener('click', (e) => {
+        if (e.target.tagName === 'IMG' && !e.target.closest('.lightbox-content') && !e.target.closest('#file-list')) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.openLightbox(e.target.src);
+        }
+    }, true);
 
 }); // end DOMContentLoaded

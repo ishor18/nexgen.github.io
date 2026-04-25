@@ -35,6 +35,14 @@
     <div id="reading-progress-container">
         <div id="reading-progress-bar"></div>
     </div>
+    <!-- Floating Share Sidebar -->
+    <div class="share-sidebar">
+        <button onclick="shareOn('facebook')" class="btn btn-outline" style="width: 45px; height: 45px; border-radius: 50%; justify-content: center; background: rgba(15,23,42,0.8);"><i class="fa-brands fa-facebook-f"></i></button>
+        <button onclick="shareOn('twitter')" class="btn btn-outline" style="width: 45px; height: 45px; border-radius: 50%; justify-content: center; background: rgba(15,23,42,0.8);"><i class="fa-brands fa-x-twitter"></i></button>
+        <button onclick="shareOn('whatsapp')" class="btn btn-outline" style="width: 45px; height: 45px; border-radius: 50%; justify-content: center; background: rgba(15,23,42,0.8); color: #25D366; border-color: #25D366;"><i class="fa-brands fa-whatsapp"></i></button>
+        <button onclick="shareOn('linkedin')" class="btn btn-outline" style="width: 45px; height: 45px; border-radius: 50%; justify-content: center; background: rgba(15,23,42,0.8);"><i class="fa-brands fa-linkedin-in"></i></button>
+    </div>
+
     <nav class="glass navbar-main">
         <div class="container nav-container">
             <a href="index.html" class="nav-brand">Nex<span>Gen</span></a>
@@ -62,6 +70,15 @@
                 <p style="color: var(--text-muted);">IN-ARTICLE ADVERTISEMENT</p>
                 <small>Placeholder for Google AdSense</small>
             </div>
+            <!-- Related Articles -->
+            <div id="related-posts-section" style="margin-top: 5rem; padding-top: 3rem; border-top: 1px solid var(--border);">
+                <h3 style="margin-bottom: 2rem;">Read Next</h3>
+                <div id="related-posts-container" class="grid grid-cols-2" style="gap: 1.5rem;">
+                    <!-- Related posts injected here -->
+                    <div class="skeleton" style="height: 150px;"></div>
+                    <div class="skeleton" style="height: 150px;"></div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -72,6 +89,69 @@
     </footer>
 
     <script>
+        // Lightbox Zoom/View Logic
+        function initLightbox() {
+            if (window.lightboxInited) return;
+            window.lightboxInited = true;
+
+            if (!document.getElementById('lightbox')) {
+                const lb = document.createElement('div');
+                lb.id = 'lightbox';
+                lb.className = 'lightbox';
+                lb.innerHTML = `
+                    <span class="lightbox-close">&times;</span>
+                    <img class="lightbox-content" id="lightbox-img">
+                `;
+                document.body.appendChild(lb);
+
+                const closeLB = () => {
+                    lb.classList.remove('active');
+                    setTimeout(() => { 
+                        lb.style.display = 'none';
+                        document.getElementById('lightbox-img').classList.remove('zoomed');
+                    }, 200);
+                    document.body.style.overflow = 'auto';
+                };
+
+                lb.onclick = (e) => {
+                    if (e.target.id === 'lightbox' || e.target.className === 'lightbox-close') {
+                        closeLB();
+                    }
+                };
+
+                const lbImg = document.getElementById('lightbox-img');
+                lbImg.onclick = (e) => {
+                    e.stopPropagation();
+                    lbImg.classList.toggle('zoomed');
+                };
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && lb.classList.contains('active')) closeLB();
+                });
+            }
+
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+
+            document.addEventListener('click', (e) => {
+                if (e.target.tagName === 'IMG' && !e.target.closest('.lightbox-content')) {
+                    const isZoomable = e.target.closest('.blog-main-content') || 
+                                     e.target.closest('#blog-content-area');
+
+                    if (isZoomable) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        lightbox.style.display = 'flex';
+                        // Force reflow
+                        lightbox.offsetHeight; 
+                        lightbox.classList.add('active');
+                        lightboxImg.src = e.target.src;
+                        document.body.style.overflow = 'hidden';
+                    }
+                }
+            }, true);
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             // Mobile nav toggle
             const hamburgerBtn = document.getElementById('hamburger-btn');
@@ -107,9 +187,12 @@
                 <h1 class="article-title">${blog.title}</h1>
                 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 3rem;">
                     <div style="display: flex; gap: 1rem; align-items: center; color: var(--text-muted);">
-                        <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                            <i class="fa-solid fa-user"></i>
-                        </div>
+                        ${blog.author_avatar_url 
+                            ? `<img src="${blog.author_avatar_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);">`
+                            : `<div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                 <i class="fa-solid fa-user"></i>
+                               </div>`
+                        }
                         <div>
                             <p style="color: var(--text); font-weight: 500;">${authorName}</p>
                             <p style="font-size: 0.8rem;">${blog.date} • ${readTime} min read</p>
@@ -269,6 +352,12 @@
                 const progressBar = document.getElementById('reading-progress-bar');
                 if (progressBar) progressBar.style.width = scrolled + "%";
             });
+
+            // Initialize Lightbox after a short delay
+            setTimeout(initLightbox, 1000);
+            
+            // Render Related Posts
+            renderRelatedPosts(blogId, blog.category);
         });
 
             async function updateMeta(blog) {
@@ -388,7 +477,7 @@
         // Copy share link
         window.copyShareLink = function() {
             navigator.clipboard.writeText(window.location.href).then(() => {
-                alert('Link copied to clipboard!');
+                showToast('Link copied to clipboard!', 'success');
             }).catch(err => {
                 console.error('Could not copy text: ', err);
             });
@@ -448,6 +537,42 @@
                 let adHtml = `<img src="${ad.image_url}" style="max-width: 100%; height: auto; border-radius: 0.5rem; display: block; margin: 0 auto; object-fit: contain;" alt="Advertisement">`;
                 if (ad.link_url) adHtml = `<a href="${ad.link_url}" target="_blank" rel="noopener" style="display: block;">${adHtml}</a>`;
                 adContainer.innerHTML = adHtml;
+            } else {
+                adContainer.style.display = 'none';
+            }
+        }
+
+        async function renderRelatedPosts(currentBlogId, category) {
+            const container = document.getElementById('related-posts-container');
+            if (!container) return;
+
+            const { data: related, error } = await supabase
+                .from('blogs')
+                .select('id, title, category, image_url, date')
+                .eq('category', category)
+                .neq('id', currentBlogId)
+                .or('status.eq.published,status.is.null')
+                .limit(2);
+
+            const posts = (related && related.length > 0) ? related : (await supabase.from('blogs').select('id, title, category, image_url, date').neq('id', currentBlogId).or('status.eq.published,status.is.null').limit(2)).data;
+
+            if (!posts || posts.length === 0) {
+                document.getElementById('related-posts-section').style.display = 'none';
+                return;
+            }
+
+            container.innerHTML = posts.map(p => `
+                <a href="blog.html?id=${p.id}" class="glass-card" style="text-decoration: none; padding: 1rem; display: flex; gap: 1rem; align-items: center; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+                    <div style="width: 80px; height: 80px; border-radius: 0.5rem; overflow: hidden; background: #1e293b; flex-shrink: 0;">
+                        <img src="${p.image_url || 'https://via.placeholder.com/150'}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div>
+                        <small style="color: var(--primary); font-weight: 600; text-transform: uppercase; font-size: 0.7rem;">${p.category}</small>
+                        <h4 style="color: white; font-size: 0.95rem; margin: 0.2rem 0 0; line-height: 1.3;">${p.title}</h4>
+                    </div>
+                </a>
+            `).join('');
+        }
             }
         }
 

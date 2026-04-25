@@ -179,11 +179,19 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPage = 0;
 
         // Show loading skeleton
-        blogContainer.innerHTML = `
-            <div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:3rem;">
-                <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;"></i>
-                <p style="margin-top:1rem;">Loading articles...</p>
-            </div>`;
+        // Show premium skeleton loading
+        blogContainer.innerHTML = Array(3).fill(0).map(() => `
+            <div class="glass-card" style="display:flex; flex-direction:column; gap:1rem;">
+                <div class="skeleton" style="width:100%; height:200px; border-radius:0.5rem;"></div>
+                <div class="skeleton" style="width:40%; height:1rem;"></div>
+                <div class="skeleton" style="width:90%; height:1.5rem;"></div>
+                <div class="skeleton" style="width:100%; height:3rem;"></div>
+                <div style="display:flex; gap:1rem; margin-top:auto;">
+                    <div class="skeleton" style="width:30%; height:0.8rem;"></div>
+                    <div class="skeleton" style="width:30%; height:0.8rem;"></div>
+                </div>
+            </div>
+        `).join('');
         if (loadMoreBtn) loadMoreBtn.style.display = 'none';
 
         try {
@@ -338,7 +346,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p style="color:var(--text-muted);font-size:0.9rem;flex-grow:1;margin:0;">${blog.excerpt}</p>
 
                     <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;">
-                        <i class="fa-solid fa-circle-user"></i>
+                        ${blog.author_avatar_url 
+                            ? `<img src="${blog.author_avatar_url}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;">`
+                            : `<i class="fa-solid fa-circle-user"></i>`
+                        }
                         ${blog.author_name || 'NexGen Author'}
                     </div>
 
