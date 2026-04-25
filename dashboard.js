@@ -11,6 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAdmin = false;
     let isSuperAdmin = false;
 
+    let quill = null;
+    // Helper: Calculate reading time
+    function calculateReadingTime(text) {
+        const wordsPerMinute = 200;
+        const words = text.trim().split(/\s+/).length;
+        return Math.max(1, Math.ceil(words / wordsPerMinute));
+    }
+
     // ============================================================
     // AUTH CHECK
     // ============================================================
@@ -75,17 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-    }
-
-    let quill = null;
-
-    // Helper: Calculate reading time
-    function calculateReadingTime(text) {
-        const wordsPerMinute = 200;
-        const words = text.trim().split(/\s+/).length;
-        return Math.max(1, Math.ceil(words / wordsPerMinute));
-    }
-
         await updateAllViews();
         setupRealtime();
     }

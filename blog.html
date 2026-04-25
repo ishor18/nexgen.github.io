@@ -258,10 +258,8 @@
                     }
                 });
             }
-        });
-
-            // Update Meta Tags for SEO
-            updateMeta(blog);
+            // Update Meta Tags for SEO (after content is fetched)
+            if (blog) updateMeta(blog);
 
             // Progress Bar Logic
             window.addEventListener('scroll', () => {
@@ -271,6 +269,7 @@
                 const progressBar = document.getElementById('reading-progress-bar');
                 if (progressBar) progressBar.style.width = scrolled + "%";
             });
+        });
 
             async function updateMeta(blog) {
                 document.title = `${blog.title} | NexGen`;
@@ -450,6 +449,16 @@
                 if (ad.link_url) adHtml = `<a href="${ad.link_url}" target="_blank" rel="noopener" style="display: block;">${adHtml}</a>`;
                 adContainer.innerHTML = adHtml;
             }
+        }
+
+        // Helper: Persistent unique ID for anonymous reactions
+        function getUserIdentifier() {
+            let id = localStorage.getItem('nexgen_user_id');
+            if (!id) {
+                id = 'user_' + Math.random().toString(36).substring(2, 11);
+                localStorage.setItem('nexgen_user_id', id);
+            }
+            return id;
         }
     </script>
 </body>
