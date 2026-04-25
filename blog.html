@@ -3,7 +3,6 @@
 
 <head>
     <meta charset="UTF-8">
-       <meta name="google-adsense-account" content="ca-pub-1931185774726426">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexGen | Read Article</title>
     <link rel="stylesheet" href="style.css">
@@ -95,6 +94,7 @@
             if (window.lightboxInited) return;
             window.lightboxInited = true;
 
+            // 1. Create structure if missing
             if (!document.getElementById('lightbox')) {
                 const lb = document.createElement('div');
                 lb.id = 'lightbox';
@@ -104,37 +104,42 @@
                     <img class="lightbox-content" id="lightbox-img">
                 `;
                 document.body.appendChild(lb);
-
-                const closeLB = () => {
-                    lb.classList.remove('active');
-                    setTimeout(() => { 
-                        lb.style.display = 'none';
-                        document.getElementById('lightbox-img').classList.remove('zoomed');
-                    }, 200);
-                    document.body.style.overflow = 'auto';
-                };
-
-                lb.onclick = (e) => {
-                    if (e.target.id === 'lightbox' || e.target.className === 'lightbox-close') {
-                        closeLB();
-                    }
-                };
-
-                const lbImg = document.getElementById('lightbox-img');
-                lbImg.onclick = (e) => {
-                    e.stopPropagation();
-                    lbImg.classList.toggle('zoomed');
-                };
-                
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && lb.classList.contains('active')) closeLB();
-                });
             }
 
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');
 
+            const closeLB = () => {
+                if (!lightbox) return;
+                lightbox.classList.remove('active');
+                setTimeout(() => { 
+                    lightbox.style.display = 'none';
+                    if (lightboxImg) lightboxImg.classList.remove('zoomed');
+                }, 200);
+                document.body.style.overflow = '';
+            };
+
+            // Close logic
+            lightbox.addEventListener('click', (e) => {
+                if (e.target.id === 'lightbox' || e.target.classList.contains('lightbox-close')) {
+                    closeLB();
+                }
+            });
+
+            if (lightboxImg) {
+                lightboxImg.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    lightboxImg.classList.toggle('zoomed');
+                });
+            }
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && lightbox.classList.contains('active')) closeLB();
+            });
+
+            // Delegation
             document.addEventListener('click', (e) => {
+                // If it's an image and not already inside the lightbox
                 if (e.target.tagName === 'IMG' && !e.target.closest('.lightbox-content')) {
                     const isZoomable = e.target.closest('.blog-main-content') || 
                                      e.target.closest('#blog-content-area');
@@ -143,14 +148,13 @@
                         e.preventDefault();
                         e.stopPropagation();
                         lightbox.style.display = 'flex';
-                        // Force reflow
                         lightbox.offsetHeight; 
                         lightbox.classList.add('active');
                         lightboxImg.src = e.target.src;
                         document.body.style.overflow = 'hidden';
                     }
                 }
-            }, true);
+            });
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -354,8 +358,8 @@
                 if (progressBar) progressBar.style.width = scrolled + "%";
             });
 
-            // Initialize Lightbox after a short delay
-            setTimeout(initLightbox, 1000);
+            // Initialize Lightbox immediately
+            initLightbox();
             
             // Render Related Posts
             renderRelatedPosts(blogId, blog.category);
