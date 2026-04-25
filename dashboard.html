@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script src="supabase.js"></script>
     <style>
         .badge {
@@ -286,6 +288,19 @@
                         <tbody id="earnings-blog-table"></tbody>
                     </table>
                 </div>
+
+                <div id="referral-banner" class="glass-card" style="margin-top: 2rem; background: linear-gradient(135deg, rgba(37,99,235,0.1), rgba(124,58,237,0.1)); border: 1px dashed var(--primary);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+                        <div>
+                            <h4 style="color: white; margin-bottom: 0.5rem;"><i class="fa-solid fa-gift" style="color: var(--accent);"></i> Invite Creators & Earn</h4>
+                            <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 500px;">Share your referral link with other bloggers. You'll earn a bonus for every successful referral.</p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; background: rgba(15,23,42,0.5); padding: 0.5rem; border-radius: 0.5rem; border: 1px solid var(--border);">
+                            <code id="referral-link-val" style="color: var(--primary); font-weight: 600; padding: 0.25rem 0.5rem;">Loading...</code>
+                            <button onclick="copyReferralLink()" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;"><i class="fa-solid fa-copy"></i> Copy</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- ===== WALLET VIEW ===== -->
@@ -472,6 +487,32 @@
                         <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Update Password</button>
                     </form>
                 </div>
+
+                <div class="glass-card" style="max-width: 500px; margin-top: 1.5rem;">
+                    <h3 style="margin-bottom: 1.5rem;"><i class="fa-solid fa-user-pen"></i> Profile Settings</h3>
+                    <form id="profile-settings-form" style="display: grid; gap: 1rem;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Full Name</label>
+                            <input type="text" id="profile-name" required
+                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Avatar URL</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="profile-avatar-url" placeholder="https://..."
+                                    style="flex-grow: 1; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                                <button type="button" id="upload-avatar-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;"><i class="fa-solid fa-upload"></i></button>
+                                <input type="file" id="avatar-file-input" style="display: none;" accept="image/*">
+                            </div>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Bio</label>
+                            <textarea id="profile-bio" placeholder="Tell your readers about yourself..."
+                                style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white; height: 100px; resize: none;"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Save Profile</button>
+                    </form>
+                </div>
             </div>
 
             <!-- ===== ADS VIEW ===== -->
@@ -600,15 +641,22 @@
                     <label>Excerpt *</label>
                     <textarea id="blog-excerpt" required style="height: 70px;"></textarea>
                 </div>
-                <div>
-                    <label>Attach File (Optional)</label>
-                    <select id="blog-file-attach" style="background: #1e293b;">
-                        <option value="">No File Attached</option>
-                    </select>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label>Attach File (Optional)</label>
+                        <select id="blog-file-attach" style="background: #1e293b;">
+                            <option value="">No File Attached</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Schedule Post (Optional)</label>
+                        <input type="datetime-local" id="blog-scheduled-for" style="width: 100%; border: 1px solid var(--border); background: #1e293b; color: white; padding: 0.75rem; border-radius: 0.5rem; font-family: inherit;">
+                    </div>
                 </div>
                 <div>
                     <label>Full Content *</label>
-                    <textarea id="blog-content" required style="height: 150px;"></textarea>
+                    <div id="blog-editor" style="height: 300px; background: rgba(255,255,255,0.02); color: white; border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem;"></div>
+                    <textarea id="blog-content" style="display: none;"></textarea>
                 </div>
                 <div class="modal-actions" style="margin-top: 0.5rem;">
                     <button type="submit" class="btn btn-primary">Publish Post</button>

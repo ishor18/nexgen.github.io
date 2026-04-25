@@ -25,6 +25,21 @@
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Light Mode Overrides */
+[data-theme="light"] {
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --gradient-glass: linear-gradient(135deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.02) 100%);
+}
+
+.glass[data-theme="light"] {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 *,
 *::before,
 *::after {
@@ -138,6 +153,62 @@ button {
 .grid {
     display: grid;
     gap: 1.5rem;
+}
+
+/* Reading Progress Bar */
+#reading-progress-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: transparent;
+    z-index: 2000;
+}
+
+#reading-progress-bar {
+    height: 100%;
+    background: var(--gradient-primary);
+    width: 0%;
+    transition: width 0.1s ease-out;
+    box-shadow: 0 0 10px var(--primary);
+}
+
+/* Search Interface */
+.search-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    position: relative;
+    z-index: 10;
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input-wrapper i {
+    position: absolute;
+    left: 1.25rem;
+    color: var(--text-muted);
+}
+
+.search-field {
+    width: 100%;
+    padding: 1rem 1rem 1rem 3rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    color: var(--text);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.search-field:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.15);
 }
 
 /* Sidebar Nav Consistency */

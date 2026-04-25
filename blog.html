@@ -9,9 +9,32 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
+
+    <!-- Dynamic SEO Meta -->
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="NexGen">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta id="meta-og-title" property="og:title" content="NexGen Article">
+    <meta id="meta-og-desc" property="og:description" content="Read this insightful article on NexGen.">
+    <meta id="meta-og-image" property="og:image" content="">
+    <meta id="meta-twitter-title" name="twitter:title" content="NexGen Article">
+    <meta id="meta-twitter-desc" name="twitter:description" content="Read this insightful article on NexGen.">
+    <meta id="meta-twitter-image" name="twitter:image" content="">
+    <style>
+        .article-title { font-size: 3.5rem; margin: 1rem 0 2rem; line-height: 1.1; color: var(--text); }
+        @media (max-width: 768px) {
+            .section { padding: 4rem 1.25rem !important; }
+            .article-title { font-size: 2.2rem !important; }
+            .blog-main-content img { border-radius: 0.5rem; width: 100% !important; height: auto !important; }
+        }
+    </style>
 </head>
 
 <body>
+    <!-- Reading Progress Bar -->
+    <div id="reading-progress-container">
+        <div id="reading-progress-bar"></div>
+    </div>
     <nav class="glass navbar-main">
         <div class="container nav-container">
             <a href="index.html" class="nav-brand">Nex<span>Gen</span></a>
@@ -81,7 +104,7 @@
 
             container.innerHTML = `
                 <small style="color: var(--primary); text-transform: uppercase; font-weight: 600;">${blog.category}</small>
-                <h1 style="font-size: 3.5rem; margin: 1rem 0 2rem;">${blog.title}</h1>
+                <h1 class="article-title">${blog.title}</h1>
                 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 3rem;">
                     <div style="display: flex; gap: 1rem; align-items: center; color: var(--text-muted);">
                         <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
@@ -110,8 +133,8 @@
                         <i class="fa-solid fa-image" style="font-size: 5rem; color: var(--secondary);"></i>
                     </div>
                 `}
-                <div style="font-size: 1.1rem; line-height: 1.8; color: var(--text-muted);">
-                    ${blog.content.split('\n').map(p => `<p style="margin-bottom: 1.5rem;">${p}</p>`).join('')}
+                <div class="blog-main-content" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-muted);">
+                    ${blog.content}
                 </div>
 
                 ${blog.file_id ? `
@@ -148,10 +171,10 @@
                     <form id="comment-form" class="glass-card" style="padding: 2rem; margin-bottom: 3rem;">
                         <h4 style="margin-bottom: 1.5rem;">Leave a Comment</h4>
                         <div style="display: grid; gap: 1rem;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                <input type="text" id="comment-name" required placeholder="Your Name" style="padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
-                                <input type="email" id="comment-email" required placeholder="Your Email" style="padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
-                            </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                            <input type="text" id="comment-name" required placeholder="Your Name" style="padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                            <input type="email" id="comment-email" required placeholder="Your Email" style="padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white;">
+                        </div>
                             <textarea id="comment-text" required placeholder="Share your thoughts..." style="padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 0.5rem; color: white; min-height: 120px; resize: vertical;"></textarea>
                             <button type="submit" class="btn btn-primary" style="justify-self: start;">
                                 <i class="fa-solid fa-paper-plane"></i> Post Comment
@@ -237,15 +260,34 @@
             }
         });
 
-        // User identifier (simple IP-based or session-based)
-        function getUserIdentifier() {
-            let userId = localStorage.getItem('user_identifier');
-            if (!userId) {
-                userId = 'user_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('user_identifier', userId);
+            // Update Meta Tags for SEO
+            updateMeta(blog);
+
+            // Progress Bar Logic
+            window.addEventListener('scroll', () => {
+                const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+                const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrolled = (winScroll / height) * 100;
+                const progressBar = document.getElementById('reading-progress-bar');
+                if (progressBar) progressBar.style.width = scrolled + "%";
+            });
+
+            async function updateMeta(blog) {
+                document.title = `${blog.title} | NexGen`;
+                const metaTitle = document.getElementById('meta-og-title');
+                const metaDesc = document.getElementById('meta-og-desc');
+                const metaImg = document.getElementById('meta-og-image');
+                const twTitle = document.getElementById('meta-twitter-title');
+                const twDesc = document.getElementById('meta-twitter-desc');
+                const twImg = document.getElementById('meta-twitter-image');
+
+                if (metaTitle) metaTitle.content = blog.title;
+                if (metaDesc) metaDesc.content = blog.excerpt || 'Read this insightful article on NexGen.';
+                if (metaImg) metaImg.content = blog.image_url || '';
+                if (twTitle) twTitle.content = blog.title;
+                if (twDesc) twDesc.content = blog.excerpt || 'Read this insightful article on NexGen.';
+                if (twImg) twImg.content = blog.image_url || '';
             }
-            return userId;
-        }
 
         // Load and display reactions
         async function loadReactions(blogId) {

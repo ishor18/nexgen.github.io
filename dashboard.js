@@ -59,6 +59,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (userStat) userStat.style.display = 'block';
         }
 
+        // Initialize Quill Editor
+        if (document.getElementById('blog-editor')) {
+            quill = new Quill('#blog-editor', {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link', 'image', 'video'],
+                        ['clean']
+                    ]
+                }
+            });
+        }
+    }
+
+    let quill = null;
+
+    // Helper: Calculate reading time
+    function calculateReadingTime(text) {
+        const wordsPerMinute = 200;
+        const words = text.trim().split(/\s+/).length;
+        return Math.max(1, Math.ceil(words / wordsPerMinute));
+    }
+
         await updateAllViews();
         setupRealtime();
     }
@@ -294,14 +321,20 @@ document.addEventListener('DOMContentLoaded', () => {
     newBlogForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const editId  = newBlogForm.getAttribute('data-edit-id');
+        const content = quill ? quill.root.innerHTML : document.getElementById('blog-content').value;
+        const textOnly = quill ? quill.getText() : content;
+        const readingTime = calculateReadingTime(textOnly);
+
         const blogData = {
             title:     document.getElementById('blog-title').value,
             category:  document.getElementById('blog-category').value,
             excerpt:   document.getElementById('blog-excerpt').value,
-            content:   document.getElementById('blog-content').value,
+            content:   content,
             image_url: document.getElementById('blog-image').value,
             status:    document.getElementById('blog-status').value,
             file_id:   document.getElementById('blog-file-attach').value || null,
+            scheduled_for: document.getElementById('blog-scheduled-for').value || null,
+            reading_time: readingTime,
             date:      new Date().toLocaleDateString(),
             author_id: currentUser.id,
             author_name: currentProfile?.full_name || currentUser.email
@@ -314,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result.error) { alert(result.error.message); return; }
         blogModal.style.display = 'none';
         newBlogForm.reset();
+        if (quill) quill.setContents([]);
         newBlogForm.removeAttribute('data-edit-id');
         document.querySelector('#new-blog-form button[type="submit"]').innerText = 'Publish Post';
         await updateAllViews();
@@ -326,9 +360,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('blog-title').value     = blog.title;
         document.getElementById('blog-category').value  = blog.category;
         document.getElementById('blog-excerpt').value   = blog.excerpt;
-        document.getElementById('blog-content').value   = blog.content;
+        if (quill) quill.root.innerHTML = blog.content;
+        else document.getElementById('blog-content').value = blog.content;
         document.getElementById('blog-image').value     = blog.image_url || '';
         document.getElementById('blog-status').value    = blog.status || 'published';
+        document.getElementById('blog-scheduled-for').value = blog.scheduled_for ? blog.scheduled_for.slice(0, 16) : '';
         await populateFileSelectors(blog.file_id);
         newBlogForm.setAttribute('data-edit-id', id);
         document.getElementById('blog-modal-title').innerText = 'Edit Blog Post';
@@ -1434,6 +1470,71 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ============================================================
+    // PROFILE SETTINGS
+    // ============================================================
+    const profileForm = document.getElementById('profile-settings-form');
+    if (profileForm) {
+        // Load initial data
+        document.getElementById('profile-name').value = currentProfile.full_name || '';
+        document.getElementById('profile-avatar-url').value = currentProfile.avatar_url || '';
+        document.getElementById('profile-bio').value = currentProfile.bio || '';
+
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const full_name = document.getElementById('profile-name').value;
+            const avatar_url = document.getElementById('profile-avatar-url').value;
+            const bio = document.getElementById('profile-bio').value;
+
+            const { error } = await supabase.from('profiles').update({ full_name, avatar_url, bio }).eq('id', currentUser.id);
+            if (error) alert(error.message);
+            else {
+                showToastMsg('Profile updated!', 'success');
+                currentProfile.full_name = full_name;
+                currentProfile.avatar_url = avatar_url;
+                currentProfile.bio = bio;
+            }
+        });
+    }
+
+    // Avatar Upload
+    const uploadAvatarBtn = document.getElementById('upload-avatar-btn');
+    const avatarFileInput = document.getElementById('avatar-file-input');
+    if (uploadAvatarBtn && avatarFileInput) {
+        uploadAvatarBtn.addEventListener('click', () => avatarFileInput.click());
+        avatarFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const ext = file.name.split('.').pop();
+            const fn = `avatar_${currentUser.id}_${Date.now()}.${ext}`;
+            uploadAvatarBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            const { error: se } = await supabase.storage.from('nexgen-uploads').upload(`avatars/${fn}`, file, { upsert: true });
+            uploadAvatarBtn.innerHTML = '<i class="fa-solid fa-upload"></i>';
+            if (se) { alert(se.message); return; }
+            const { data: { publicUrl } } = supabase.storage.from('nexgen-uploads').getPublicUrl(`avatars/${fn}`);
+            document.getElementById('profile-avatar-url').value = publicUrl;
+        });
+    }
+
+    // ============================================================
+    // REFERRAL LOGIC
+    // ============================================================
+    function setupReferral() {
+        const refLinkVal = document.getElementById('referral-link-val');
+        if (refLinkVal && currentProfile.referral_code) {
+            const baseUrl = window.location.origin + window.location.pathname.replace('dashboard.html', 'auth.html');
+            refLinkVal.innerText = `${baseUrl}?ref=${currentProfile.referral_code}`;
+        }
+    }
+    setupReferral();
+
+    window.copyReferralLink = function() {
+        const text = document.getElementById('referral-link-val').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            showToastMsg('Referral link copied!', 'success');
+        });
+    };
+
+    // ============================================================
     // TOAST HELPER
     // ============================================================
     function showToastMsg(msg, type = 'success') {
@@ -1445,6 +1546,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ? '<i class="fa-solid fa-check-circle"></i>'
             : '<i class="fa-solid fa-circle-exclamation"></i>';
         toast.innerHTML = `${icon} <span>${msg}</span>`;
+        if (container.children.length > 5) container.children[0].remove();
         container.appendChild(toast);
         setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3500);
     }

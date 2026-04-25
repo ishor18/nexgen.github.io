@@ -1,0 +1,16 @@
+{
+  "name": "NexGen Platform",
+  "short_name": "NexGen",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "description": "Premium Blog & Content Monetization Platform",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

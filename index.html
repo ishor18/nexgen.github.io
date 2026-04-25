@@ -12,6 +12,22 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
     <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+    <style>
+        @media (max-width: 768px) {
+            .section { padding: 4rem 1.25rem !important; }
+            .hero-title { font-size: 2.5rem !important; }
+            .grid { grid-template-columns: 1fr !important; }
+            .nav-menu { padding: 1.5rem !important; }
+        }
+    </style>
 </head>
 
 <body>
@@ -27,6 +43,9 @@
             <div class="nav-menu" id="nav-menu">
                 <a href="#blogs">Blogs</a>
                 <a href="#features">Features</a>
+                <button id="theme-toggle" class="btn btn-outline" style="padding: 0.5rem; width: 40px; height: 40px; border-radius: 50%; justify-content: center;" title="Toggle Dark/Light Mode">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
                 <a href="auth.html" class="btn btn-outline">Login</a>
                 <a href="auth.html" class="btn btn-primary">Get Started</a>
             </div>
@@ -89,6 +108,13 @@
     <!-- Latest Blogs -->
     <section id="blogs" class="section">
         <div class="container">
+            <!-- Search Interface -->
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="blog-search" class="search-field" placeholder="Search for articles, technologies, or insights...">
+                </div>
+            </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
                 <h2 class="section-title" style="margin: 0;">Featured Insights</h2>
                 <div style="display: flex; gap: 0.5rem;">

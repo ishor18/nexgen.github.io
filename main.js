@@ -22,6 +22,57 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     setTimeout(() => { if (window.initScrollAnimations) window.initScrollAnimations(); }, 100);
 
+    // ── Theme Toggle ───────────────────────────────────────────
+    const themeBtn = document.getElementById('theme-toggle');
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    document.body.setAttribute('data-theme', currentTheme);
+    updateThemeIcon(currentTheme);
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const newTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+    }
+
+    function updateThemeIcon(theme) {
+        if (!themeBtn) return;
+        const icon = themeBtn.querySelector('i');
+        if (theme === 'light') {
+            icon.className = 'fa-solid fa-sun';
+        } else {
+            icon.className = 'fa-solid fa-moon';
+        }
+    }
+
+    // ── Search & Filtering ─────────────────────────────────────
+    const searchInput = document.getElementById('blog-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allBlogs.filter(b => 
+                b.title.toLowerCase().includes(query) || 
+                b.category.toLowerCase().includes(query) ||
+                (b.excerpt && b.excerpt.toLowerCase().includes(query))
+            );
+            
+            const blogContainer = document.getElementById('blog-container');
+            const loadMoreBtn   = document.getElementById('load-more-btn');
+            
+            if (blogContainer) {
+                if (filtered.length === 0) {
+                    blogContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">No matching articles found.</div>`;
+                    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+                } else {
+                    renderBlogCards(blogContainer, filtered.slice(0, (currentPage + 1) * PAGE_SIZE), true);
+                    if (loadMoreBtn) updateLoadMoreBtn(loadMoreBtn);
+                }
+            }
+        });
+    }
+
     // ── Real-time blog feed ────────────────────────────────────
     supabase
         .channel('public-blog-feed')
