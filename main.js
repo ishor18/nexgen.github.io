@@ -346,10 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p style="color:var(--text-muted);font-size:0.9rem;flex-grow:1;margin:0;">${blog.excerpt}</p>
 
                     <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;">
-                        ${blog.author_avatar_url 
-                            ? `<img src="${blog.author_avatar_url}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;">`
-                            : `<i class="fa-solid fa-circle-user"></i>`
-                        }
+                        <i class="fa-solid fa-circle-user"></i>
                         ${blog.author_name || 'NexGen Author'}
                     </div>
 
