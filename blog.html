@@ -242,12 +242,9 @@
                 <h1 class="article-title">${blog.title}</h1>
                 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 3rem;">
                     <div style="display: flex; gap: 1rem; align-items: center; color: var(--text-muted);">
-                        ${blog.author_avatar_url 
-                            ? `<img src="${blog.author_avatar_url}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);">`
-                            : `<div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                                 <i class="fa-solid fa-user"></i>
-                               </div>`
-                        }
+                        <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
                         <div>
                             <p style="color: var(--text); font-weight: 500;">${authorName}</p>
                             <p style="font-size: 0.8rem;">${blog.date} • ${readTime} min read</p>
