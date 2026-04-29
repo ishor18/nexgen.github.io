@@ -335,8 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reading_time: readingTime,
             date:      new Date().toLocaleDateString(),
             author_id: currentUser.id,
-            author_name: currentProfile?.full_name || currentUser.email,
-            author_avatar_url: currentProfile?.avatar_url || null
+            author_name: currentProfile?.full_name || currentUser.email
         };
 
         const result = editId
